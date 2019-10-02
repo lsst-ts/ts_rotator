@@ -17,42 +17,42 @@ class RotatorCSC(salobj.ConfigurableCsc):
     async def configure(self, config):
         self.config = config
 
-    async def do_configureAcceleration(self, id_data):
-        """ """
-        pass
+    async def do_configureAcceleration(self, data):
+        """Execute the configureAcceleration command."""
+        raise NotImplementedError()
 
-    async def do_configureVelocity(self, id_data):
-        """ """
-        pass
+    async def do_configureVelocity(self, data):
+        """Execute the configureVelocity command"""
+        raise NotImplementedError()
 
-    async def do_move(self, id_data):
-        """ """
-        pass
+    async def do_move(self, data):
+        """Execute the move command."""
+        raise NotImplementedError()
 
-    async def do_track(self, id_data):
-        """ """
-        pass
+    async def do_track(self, data):
+        """Execute the track command."""
+        raise NotImplementedError()
 
-    async def do_test(self, id_data):
-        """ """
-        pass
+    async def do_test(self, data):
+        """Execute the test command."""
+        raise NotImplementedError()
 
-    async def do_trackStart(self, id_data):
-        """ """
-        pass
+    async def do_trackStart(self, data):
+        """Execute the trackStart command."""
+        raise NotImplementedError()
 
-    async def do_clearError(self, id_data):
-        """ """
-        pass
+    async def do_clearError(self, data):
+        """Execute the clearError command."""
+        raise NotImplementedError()
 
-    async def do_positionSet(self, id_data):
-        """ """
-        pass
+    async def do_positionSet(self, data):
+        """Execute the positionSet command."""
+        raise NotImplementedError()
 
-    async def do_moveConstantVelocity(self, id_data):
-        """ """
-        pass
+    async def do_moveConstantVelocity(self, data):
+        """Execute the moveConstantVelocity command."""
+        raise NotImplementedError()
 
-    async def do_velocitySet(self, id_data):
-        """ """
-        pass
+    async def do_velocitySet(self, data):
+        """Execute the velocitySet command."""
+        raise NotImplementedError()
