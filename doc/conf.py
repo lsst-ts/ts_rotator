@@ -10,4 +10,4 @@ import lsst.ts.rotator
 _g = globals()
 _g.update(build_package_configs(
     project_name='ts_rotator',
-    version=lsst.ts.rotator.version.__version__))
+    version=lsst.ts.rotator.__version__))
