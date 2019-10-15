@@ -85,6 +85,12 @@ class RotatorCsc(salobj.Controller):
         self.simulation_mode = simulation_mode
         self.server = None
         self.mock_ctrl = None
+        # Set this to 2 when trackStart is called, then decrement
+        # when telemetry is received. If > 0 or enabled_substate is
+        # SLEWING_OR_TRACKING then allow the track command.
+        # This solves the problem of allowing the track command
+        # immediately after the trackStart, before telemetry is received.
+        self._tracking_started_n = 0
         super().__init__(name="Rotator", index=0, do_callbacks=True)
 
         # Dict of enum.CommandCode: Command
@@ -317,10 +323,13 @@ class RotatorCsc(salobj.Controller):
     async def do_track(self, data):
         """Specify a position, velocity, TAI time tracking update.
         """
-        self.assert_enabled_substate(enums.EnabledSubstate.SLEWING_OR_TRACKING)
-        if abs(data.velocity) > self.server.config.velocity_limit:
-            raise salobj.ExpectedError(f"Velocity {data.velocity} > "
-                                       f"limit {self.server.config.velocity_limit}")
+        if self.summary_state != salobj.State.ENABLED:
+            raise salobj.ExpectedError("Not enabled")
+        if self.server.telemetry.enabled_substate != enums.EnabledSubstate.SLEWING_OR_TRACKING:
+            if self._tracking_started_n <= 0:
+                raise salobj.ExpectedError("Low-level controller in substate "
+                                           f"{self.server.telemetry.enabled_substate} "
+                                           f"instead of {enums.EnabledSubstate.SLEWING_OR_TRACKING}")
         dt = salobj.current_tai() - data.tai
         curr_pos = data.angle + data.velocity*dt
         if not self.server.config.lower_pos_limit <= curr_pos <= self.server.config.upper_pos_limit:
@@ -341,6 +350,7 @@ class RotatorCsc(salobj.Controller):
         self.assert_enabled_substate(enums.EnabledSubstate.STATIONARY)
         await self.run_command(cmd=enums.CommandCode.SET_SUBSTATE,
                                param1=enums.EnabledSetSubstateParam.TRACK)
+        self._tracking_started_n = 2
 
     async def do_velocitySet(self, data):
         """Specify the velocity and duration for the ``moveConstantVelocity``
@@ -363,7 +373,7 @@ class RotatorCsc(salobj.Controller):
         if self.server.telemetry.enabled_substate != substate:
             raise salobj.ExpectedError("Low-level controller in substate "
                                        f"{self.server.telemetry.enabled_substate} "
-                                       f"instead of {substate}")
+                                       f"instead of {substate!r}")
 
     def connect_callback(self, server):
         """Called when the server's command or telemetry sockets
@@ -403,6 +413,8 @@ class RotatorCsc(salobj.Controller):
         server : `lsst.ts.hexrotcomm.Server`
             TCP/IP server.
         """
+        if self._tracking_started_n > 0:
+            self._tracking_started_n -= 1
         self.evt_summaryState.set_put(summaryState=self.summary_state)
         # Strangely telemetry.state, offline_substate and enabled_substate
         # are all floats from the controller. But they should only have
