@@ -333,7 +333,7 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
             if self.telemetry.state == enums.ControllerState.OFFLINE else 0
         self.telemetry.enabled_substate = enums.EnabledSubstate.STATIONARY \
             if self.telemetry.state == enums.ControllerState.ENABLED else 0
-        self.log.debug("set_state: state={enums.ControllerState(self.telemetry.state)!r}; "
+        self.log.debug(f"set_state: state={enums.ControllerState(self.telemetry.state)!r}; "
                        f"offline_substate={enums.OfflineSubstate(self.telemetry.offline_substate)}; "
                        f"enabled_substate={enums.EnabledSubstate(self.telemetry.enabled_substate)}")
 
@@ -373,11 +373,10 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
             self.telemetry.copley_fault_status_register = (0, 0)
             self.telemetry.application_status = 1
             self.telemetry.commanded_pos = cmd_pos
-            if self.telemetry.current_pos != self.rotator.curr_pos:
+            if self.telemetry.current_pos != curr_pos:
                 self.log.debug(f"update_telemetry: curr_pos={curr_pos:0.2f}; cmd_pos={cmd_pos:0.2f}; "
                                f"in_position={in_position}")
-            self.telemetry.current_pos = self.rotator.curr_pos
-            self.telemetry.set_pos = self.rotator.end_pos
+            self.telemetry.current_pos = curr_pos
             if self.telemetry.state != enums.ControllerState.ENABLED:
                 self.telemetry.enabled_substate = enums.EnabledSubstate.STATIONARY
             if self.telemetry.state != enums.ControllerState.OFFLINE:
