@@ -172,12 +172,16 @@ class RotatorCsc(salobj.Controller):
         self.assert_summary_state(salobj.State.DISABLED)
         await self.run_command(cmd=enums.CommandCode.SET_STATE,
                                param1=enums.SetStateParam.ENABLE)
+        await self.server.next_telemetry()
+        self.assert_summary_state(salobj.State.ENABLED)
 
     async def do_disable(self, data):
         """Execute the disable command."""
         self.assert_summary_state(salobj.State.ENABLED)
         await self.run_command(cmd=enums.CommandCode.SET_STATE,
                                param1=enums.SetStateParam.DISABLE)
+        await self.server.next_telemetry()
+        self.assert_summary_state(salobj.State.DISABLED)
 
     async def do_enterControl(self, data):
         """Execute the enterControl command.
@@ -188,11 +192,15 @@ class RotatorCsc(salobj.Controller):
                 "Use the engineering interface to put the controller into state OFFLINE/AVAILABLE")
         await self.run_command(cmd=enums.CommandCode.SET_STATE,
                                param1=enums.SetStateParam.ENTER_CONTROL)
+        await self.server.next_telemetry()
+        self.assert_summary_state(salobj.State.STANDBY)
 
     async def do_exitControl(self, data):
         self.assert_summary_state(salobj.State.STANDBY)
         await self.run_command(cmd=enums.CommandCode.SET_STATE,
                                param1=enums.SetStateParam.EXIT)
+        await self.server.next_telemetry()
+        self.assert_summary_state(salobj.State.OFFLINE)
 
     async def do_standby(self, data):
         self.assert_summary_state(salobj.State.DISABLED, salobj.State.FAULT)
@@ -203,6 +211,8 @@ class RotatorCsc(salobj.Controller):
             raise salobj.ExpectedError(
                 "Use clearError or the engineering interface to set the state to OFFLINE/PUBLISH_ONLY, "
                 "then use the engineering interface to set the state to OFFLINE/AVAILABLE.")
+        await self.server.next_telemetry()
+        self.assert_summary_state(salobj.State.STANDBY)
 
     async def do_start(self, data):
         """Execute the start command.
@@ -217,6 +227,8 @@ class RotatorCsc(salobj.Controller):
             raise salobj.ExpectedError(f"CSC is in {self.summary_state}; must be STANDBY state to start")
         await self.run_command(cmd=enums.CommandCode.SET_STATE,
                                param1=enums.SetStateParam.START)
+        await self.server.next_telemetry()
+        self.assert_summary_state(salobj.State.DISABLED)
 
     # Rotator-specific commands.
     async def do_clearError(self, data):
@@ -235,6 +247,8 @@ class RotatorCsc(salobj.Controller):
         await asyncio.sleep(0.9)
         await self.run_command(cmd=enums.CommandCode.SET_STATE,
                                param1=enums.SetStateParam.CLEAR_ERROR)
+        await self.server.next_telemetry()
+        self.assert_summary_state(salobj.State.OFFLINE)
 
     async def do_configureAcceleration(self, data):
         """Specify the acceleration limit."""

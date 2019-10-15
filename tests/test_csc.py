@@ -167,16 +167,21 @@ class TestRotatorCsc(asynctest.TestCase):
 
         # send enterControl; new state is STANDBY
         await self.remote.cmd_enterControl.start(timeout=STD_TIMEOUT)
+        # Check CSC summary state directly to make sure it has changed
+        # before the command is acknowledged as done.
+        self.assertEqual(self.csc.summary_state, salobj.State.STANDBY)
         await self.assert_next_summary_state(salobj.State.STANDBY)
         await self.check_bad_commands(good_commands=("start", "exitControl", "setLogLevel"))
 
         # send start; new state is DISABLED
         await self.remote.cmd_start.start(timeout=STD_TIMEOUT)
+        self.assertEqual(self.csc.summary_state, salobj.State.DISABLED)
         await self.assert_next_summary_state(salobj.State.DISABLED)
         await self.check_bad_commands(good_commands=("enable", "standby", "setLogLevel"))
 
         # send enable; new state is ENABLED
         await self.remote.cmd_enable.start(timeout=STD_TIMEOUT)
+        self.assertEqual(self.csc.summary_state, salobj.State.ENABLED)
         await self.assert_next_summary_state(salobj.State.ENABLED)
         await self.check_bad_commands(good_commands=("disable", "setLogLevel",
                                                      "configureVelocity", "configureAcceleration",
@@ -184,14 +189,17 @@ class TestRotatorCsc(asynctest.TestCase):
 
         # send disable; new state is DISABLED
         await self.remote.cmd_disable.start(timeout=STD_TIMEOUT)
+        self.assertEqual(self.csc.summary_state, salobj.State.DISABLED)
         await self.assert_next_summary_state(salobj.State.DISABLED)
 
         # send standby; new state is STANDBY
         await self.remote.cmd_standby.start(timeout=STD_TIMEOUT)
+        self.assertEqual(self.csc.summary_state, salobj.State.STANDBY)
         await self.assert_next_summary_state(salobj.State.STANDBY)
 
         # send exitControl; new state is OFFLINE
         await self.remote.cmd_exitControl.start(timeout=STD_TIMEOUT)
+        self.assertEqual(self.csc.summary_state, salobj.State.OFFLINE)
         await self.assert_next_summary_state(salobj.State.OFFLINE)
 
     async def check_bad_commands(self, bad_commands=None, good_commands=None):
