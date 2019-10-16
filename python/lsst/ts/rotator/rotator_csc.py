@@ -330,12 +330,15 @@ class RotatorCsc(salobj.Controller):
                 raise salobj.ExpectedError("Low-level controller in substate "
                                            f"{self.server.telemetry.enabled_substate} "
                                            f"instead of {enums.EnabledSubstate.SLEWING_OR_TRACKING}")
-        dt = salobj.current_tai() - data.tai
+        dt = data.tai - salobj.current_tai()
         curr_pos = data.angle + data.velocity*dt
         if not self.server.config.lower_pos_limit <= curr_pos <= self.server.config.upper_pos_limit:
             raise salobj.ExpectedError(f"current position {curr_pos} not in range "
                                        f"[{self.server.config.lower_pos_limit}, "
                                        f"{self.server.config.upper_pos_limit}]")
+        if not abs(data.velocity) <= self.server.config.velocity_limit:
+            raise salobj.ExpectedError(f"abs(velocity={data.velocity}) > "
+                                       f"[{self.server.config.velocity_limit}")
         await self.run_command(cmd=enums.CommandCode.TRACK_VEL_CMD,
                                param1=data.tai,
                                param2=data.angle,

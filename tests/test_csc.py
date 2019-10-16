@@ -80,8 +80,8 @@ class TestRotatorCsc(asynctest.TestCase):
                     print("Connected")
                     break
 
-    async def assert_next_summary_state(self, state):
-        data = await self.remote.evt_summaryState.next(flush=False, timeout=STD_TIMEOUT)
+    async def assert_next_summary_state(self, state, timeout=STD_TIMEOUT):
+        data = await self.remote.evt_summaryState.next(flush=False, timeout=timeout)
         self.assertEqual(data.summaryState, state)
 
     async def assert_next_controller_state(self, controllerState=None,
@@ -196,7 +196,7 @@ class TestRotatorCsc(asynctest.TestCase):
         await self.assert_next_summary_state(salobj.State.ENABLED)
         await self.check_bad_commands(good_commands=("disable", "setLogLevel",
                                                      "configureVelocity", "configureAcceleration",
-                                                     "move", "positionSet", "stop", "track", "trackStart"))
+                                                     "move", "positionSet", "stop", "trackStart"))
 
         # send disable; new state is DISABLED
         await self.remote.cmd_disable.start(timeout=STD_TIMEOUT)
@@ -370,6 +370,101 @@ class TestRotatorCsc(asynctest.TestCase):
         for simulation_mode in (-1, 2, 3):
             with self.assertRaises(ValueError):
                 rotator.RotatorCsc(simulation_mode=simulation_mode)
+
+    async def test_track_bad_values(self):
+        """Test the track command with bad values.
+
+        This should go into FAULT.
+        """
+        await self.make_csc(initial_state=salobj.State.ENABLED)
+        await self.assert_next_summary_state(salobj.State.ENABLED)
+        await self.assert_next_controller_state(controllerState=idl_enums.ControllerState.ENABLED,
+                                                enabledSubstate=idl_enums.EnabledSubstate.STATIONARY)
+        settings = await self.remote.evt_settingsApplied.next(flush=False, timeout=STD_TIMEOUT)
+        await self.remote.cmd_trackStart.start(timeout=STD_TIMEOUT)
+        await self.assert_next_controller_state(
+            controllerState=idl_enums.ControllerState.ENABLED,
+            enabledSubstate=idl_enums.EnabledSubstate.SLEWING_OR_TRACKING)
+
+        # Run these quickly enough and the controller will still be enabled
+        curr_tai = salobj.current_tai()
+        for pos, vel, tai in (
+            # Position out of range.
+            (settings.positionAngleLowerLimit - 0.001, 0, curr_tai),
+            (settings.positionAngleUpperLimit + 0.001, 0, curr_tai),
+            # Velocity out of range.
+            (0, settings.velocityLimit + 0.001, curr_tai),
+            # Current position and velocity OK but the position
+            # at the specified tai is out of bounds.
+            (settings.positionAngleUpperLimit - 0.001, settings.velocityLimit - 0.001, curr_tai + 1),
+        ):
+            with self.subTest(pos=pos, vel=vel, tai=tai):
+                with salobj.assertRaisesAckError(ack=salobj.SalRetCode.CMD_FAILED):
+                    await self.remote.cmd_track.set_start(angle=pos, velocity=vel, tai=tai,
+                                                          timeout=STD_TIMEOUT)
+                # Send a valid pvt to reset the tracking timer
+                # and give the controller time to deal with it.
+                await self.remote.cmd_track.set_start(angle=0, velocity=0, tai=curr_tai,
+                                                      timeout=STD_TIMEOUT)
+                await asyncio.sleep(0.01)
+
+    async def test_track_start_no_track(self):
+        """Test the trackStart command with no track command.
+
+        This should go into FAULT.
+        """
+        await self.make_csc(initial_state=salobj.State.ENABLED)
+        await self.assert_next_summary_state(salobj.State.ENABLED)
+        await self.assert_next_controller_state(controllerState=idl_enums.ControllerState.ENABLED,
+                                                enabledSubstate=idl_enums.EnabledSubstate.STATIONARY)
+        data = await self.remote.tel_Application.next(flush=True, timeout=STD_TIMEOUT)
+        self.assertAlmostEqual(data.Demand, 0)
+        self.assertAlmostEqual(data.Position, 0)
+        data = await self.remote.evt_inPosition.next(flush=False, timeout=STD_TIMEOUT)
+        self.assertFalse(data.inPosition)
+        await self.remote.cmd_trackStart.start(timeout=STD_TIMEOUT)
+        await self.assert_next_controller_state(
+            controllerState=idl_enums.ControllerState.ENABLED,
+            enabledSubstate=idl_enums.EnabledSubstate.SLEWING_OR_TRACKING)
+        # Wait a bit longer than usual to allow the tracking timer to expire.
+        await self.assert_next_summary_state(salobj.State.FAULT, timeout=STD_TIMEOUT+1)
+        await self.assert_next_controller_state(controllerState=idl_enums.ControllerState.FAULT)
+
+    async def test_track_start_late_track(self):
+        """Test the trackStart command with a late track command.
+
+        Also test that we can send the track command immediately after
+        the trackStart command. before the controller has time to tell
+        the CSC that it is in SLEWING_OR_TRACKING mode.
+        This exercises special code in the CSC that checks if the
+        track command is allowed.
+
+        After the first track command send no more.
+        This should send the CSC into FAULT.
+        """
+        await self.make_csc(initial_state=salobj.State.ENABLED)
+        await self.assert_next_summary_state(salobj.State.ENABLED)
+        await self.assert_next_controller_state(controllerState=idl_enums.ControllerState.ENABLED,
+                                                enabledSubstate=idl_enums.EnabledSubstate.STATIONARY)
+        data = await self.remote.tel_Application.next(flush=True, timeout=STD_TIMEOUT)
+        self.assertAlmostEqual(data.Demand, 0)
+        self.assertAlmostEqual(data.Position, 0)
+        data = await self.remote.evt_inPosition.next(flush=False, timeout=STD_TIMEOUT)
+        self.assertFalse(data.inPosition)
+        await self.remote.cmd_trackStart.start(timeout=STD_TIMEOUT)
+        # Immediately send a track commands (not giving the CSC time to see
+        # the changed controller state), as explained in the doc string.
+        curr_tai = salobj.current_tai()
+        await self.remote.cmd_track.set_start(angle=0, velocity=0, tai=curr_tai, timeout=STD_TIMEOUT)
+        # Now make sure the trackStart command did send the controller
+        # into the state SLEWING_OR_TRACKING
+        await self.assert_next_controller_state(
+            controllerState=idl_enums.ControllerState.ENABLED,
+            enabledSubstate=idl_enums.EnabledSubstate.SLEWING_OR_TRACKING)
+        # Wait for the lack of track commands to send the CSC into FAULT;
+        # wait a bit longer than usual to allow the tracking timer to expire.
+        await self.assert_next_summary_state(salobj.State.FAULT, timeout=STD_TIMEOUT+1)
+        await self.assert_next_controller_state(controllerState=idl_enums.ControllerState.FAULT)
 
     async def test_non_simulation_mode(self):
         ignored_initial_state = salobj.State.FAULT

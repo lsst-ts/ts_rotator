@@ -21,6 +21,7 @@
 __all__ = ["MockMTRotatorController"]
 
 import asyncio
+import math
 import time
 
 from lsst.ts import salobj
@@ -165,6 +166,7 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
         config.track_success_pos_threshold = 0.01  # deg
         config.tracking_lost_timeout = 5  # sec
         telemetry = structs.Telemetry()
+        telemetry.set_pos = math.nan
         self.tracking_timer_task = salobj.make_done_future()
 
         self.rotator = Actuator(min_pos=config.lower_pos_limit,
@@ -172,8 +174,11 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
                                 pos=0,
                                 speed=config.velocity_limit)
         # Set True when the first TRACK_VEL_CMD command is received
-        # and False when not tracking
+        # and False when not tracking. Used to delay setting
+        # telemetry.flags_slew_complete to 1 until we know
+        # where we are going.
         self.track_vel_cmd_seen = False
+
         super().__init__(log=log, config=config, telemetry=telemetry,
                          command_port=command_port, telemetry_port=telemetry_port)
         import logging
@@ -204,6 +209,10 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
     async def run_command(self, command):
         self.log.debug(f"run_command: command={enums.CommandCode(command.cmd)!r}; "
                        f"param1={command.param1}; param2={command.param2}; param3={command.param3}")
+        # Set set_pos to NaN at the end?
+        # Do this for any command except POSITION_SET.
+        # Note: MOVE_POINT_TO_POINT reads the position before it is cleared.
+        erase_set_pos = True
         if self.state == enums.ControllerState.OFFLINE:
             if command.cmd == enums.CommandCode.SET_STATE and \
                     command.param1 == enums.SetStateParam.ENTER_CONTROL:
@@ -234,6 +243,7 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
             elif self.telemetry.enabled_substate == enums.EnabledSubstate.STATIONARY:
                 if command.cmd == enums.CommandCode.POSITION_SET:
                     self.telemetry.set_pos = command.param1
+                    erase_set_pos = False
                 elif command.cmd == enums.CommandCode.CONFIG_VEL:
                     if 0 < command.param1 <= constants.MAX_VEL_LIMIT:
                         self.config.velocity_limit = command.param1
@@ -260,9 +270,13 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
                         self.tracking_timer_task.cancel()
                         self.telemetry.enabled_substate = enums.EnabledSubstate.STATIONARY
                     elif command.param1 == enums.EnabledSetSubstateParam.MOVE_POINT_TO_POINT:
-                        self.rotator.set_pos(self.telemetry.set_pos)
-                        self.telemetry.enabled_substate = enums.EnabledSubstate.MOVING_POINT_TO_POINT
-                        self.telemetry.flags_pt2pt_move_complete = 0
+                        if math.isfinite(self.telemetry.set_pos):
+                            self.rotator.set_pos(self.telemetry.set_pos)
+                            self.telemetry.enabled_substate = enums.EnabledSubstate.MOVING_POINT_TO_POINT
+                            self.telemetry.flags_pt2pt_move_complete = 0
+                        else:
+                            self.log_rejected_command("Must call POSITION_SET before calling "
+                                                      "MOVE_POINT_TO_POINT")
                     else:
                         self.log_rejected_command(command)
                 else:
@@ -305,6 +319,8 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
                 self.log_rejected_command(command)
         else:
             self.log.error(command, reason=f"Unsupported state {self.telemetry.state}")
+        if erase_set_pos:
+            self.telemetry.set_pos = math.nan
 
     def set_state(self, state):
         """Set the current state and substates.
