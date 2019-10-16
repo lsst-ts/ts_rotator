@@ -259,7 +259,7 @@ class RotatorCsc(salobj.Controller):
     async def do_configureAcceleration(self, data):
         """Specify the acceleration limit."""
         self.assert_enabled_substate(enums.EnabledSubstate.STATIONARY)
-        if not 0 < data.alimit <= constants.MAX_VEL_LIMIT:
+        if not 0 < data.alimit <= constants.MAX_ACCEL_LIMIT:
             raise salobj.ExpectedError(f"alimit={data.alimit} must be > 0 and <= {constants.MAX_ACCEL_LIMIT}")
         await self.run_command(cmd=enums.CommandCode.CONFIG_ACCEL,
                                param1=data.alimit)

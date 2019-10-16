@@ -135,6 +135,12 @@ class TestRotatorCsc(asynctest.TestCase):
         data = await self.remote.evt_settingsApplied.next(flush=False, timeout=STD_TIMEOUT)
         self.assertAlmostEqual(data.accelerationLimit, new_limit)
 
+        for bad_alimit in (-1, 0, rotator.MAX_ACCEL_LIMIT + 0.001):
+            with self.subTest(bad_alimit=bad_alimit):
+                with salobj.assertRaisesAckError(ack=salobj.SalRetCode.CMD_FAILED):
+                    await self.remote.cmd_configureAcceleration.set_start(alimit=bad_alimit,
+                                                                          timeout=STD_TIMEOUT)
+
     async def test_configure_velocity(self):
         """Test the configureVelocity command.
         """
@@ -145,6 +151,11 @@ class TestRotatorCsc(asynctest.TestCase):
         await self.remote.cmd_configureVelocity.set_start(vlimit=new_limit, timeout=STD_TIMEOUT)
         data = await self.remote.evt_settingsApplied.next(flush=False, timeout=STD_TIMEOUT)
         self.assertAlmostEqual(data.velocityLimit, new_limit)
+
+        for bad_vlimit in (0, -1, rotator.MAX_VEL_LIMIT + 0.001):
+            with self.subTest(bad_vlimit=bad_vlimit):
+                with salobj.assertRaisesAckError(ack=salobj.SalRetCode.CMD_FAILED):
+                    await self.remote.cmd_configureVelocity.set_start(vlimit=bad_vlimit, timeout=STD_TIMEOUT)
 
     async def test_standard_state_transitions(self):
         """Test standard CSC state transitions.
