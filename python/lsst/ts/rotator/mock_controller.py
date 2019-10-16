@@ -160,8 +160,8 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
         config.velocity_limit = 3  # deg/sec
         config.accel_limit = 1  # deg/sec^2
         config.pos_error_threshold = 0.1  # deg
-        config.upper_pos_limit = 360  # deg
-        config.lower_pos_limit = -360  # deg
+        config.lower_pos_limit = -90  # deg
+        config.upper_pos_limit = 90  # deg
         config.following_error_threshold = 0.1  # deg
         config.track_success_pos_threshold = 0.01  # deg
         config.tracking_lost_timeout = 5  # sec
