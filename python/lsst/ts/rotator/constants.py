@@ -21,9 +21,6 @@
 
 __all__ = ["MAX_VEL_LIMIT", "MAX_ACCEL_LIMIT", "ROTATOR_SYNC_PATTERN"]
 
-# What is this for? Do we need it?
-ERROR_CODE = 6401
-
 # Maximum velocity limit (deg/sec)
 MAX_VEL_LIMIT = 3.5
 
