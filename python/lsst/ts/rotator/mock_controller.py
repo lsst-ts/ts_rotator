@@ -260,16 +260,16 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
                     await self.write_config()
                 elif command.cmd == enums.CommandCode.SET_CONSTANT_VEL:
                     self.log.error("Mock controller does not support constant velocity motion.")
-                elif command.cmd == enums.CommandCode.SET_SUBSTATE:
-                    if command.param1 == enums.EnabledSetSubstateParam.TRACK:
+                elif command.cmd == enums.CommandCode.SET_ENABLED_SUBSTATE:
+                    if command.param1 == enums.SetEnabledSubstateParam.TRACK:
                         self.telemetry.enabled_substate = enums.EnabledSubstate.SLEWING_OR_TRACKING
                         self.tracking_timer_task.cancel()
                         self.tracking_timer_task = asyncio.create_task(self.tracking_timer())
-                    elif command.param1 == enums.EnabledSetSubstateParam.STOP:
+                    elif command.param1 == enums.SetEnabledSubstateParam.STOP:
                         self.rotator.stop()
                         self.tracking_timer_task.cancel()
                         self.telemetry.enabled_substate = enums.EnabledSubstate.STATIONARY
-                    elif command.param1 == enums.EnabledSetSubstateParam.MOVE_POINT_TO_POINT:
+                    elif command.param1 == enums.SetEnabledSubstateParam.MOVE_POINT_TO_POINT:
                         if math.isfinite(self.telemetry.set_pos):
                             self.rotator.set_pos(self.telemetry.set_pos)
                             self.telemetry.enabled_substate = enums.EnabledSubstate.MOVING_POINT_TO_POINT
@@ -282,8 +282,8 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
                 else:
                     self.log_rejected_command(command)
             elif self.telemetry.enabled_substate == enums.EnabledSubstate.MOVING_POINT_TO_POINT:
-                if command.cmd == enums.CommandCode.SET_SUBSTATE and \
-                        command.param1 == enums.EnabledSetSubstateParam.STOP:
+                if command.cmd == enums.CommandCode.SET_ENABLED_SUBSTATE and \
+                        command.param1 == enums.SetEnabledSubstateParam.STOP:
                     self.rotator.stop()
                     self.tracking_timer_task.cancel()
                     self.telemetry.enabled_substate = enums.EnabledSubstate.STATIONARY
@@ -303,8 +303,8 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
                         self.log.error(f"fault: commanded position {curr_pos} not in range "
                                        f"[{self.config.lower_pos_limit}, {self.config.upper_pos_limit}]")
                         self.set_state(enums.ControllerState.FAULT)
-                elif command.cmd == enums.CommandCode.SET_SUBSTATE and \
-                        command.param1 == enums.EnabledSetSubstateParam.STOP:
+                elif command.cmd == enums.CommandCode.SET_ENABLED_SUBSTATE and \
+                        command.param1 == enums.SetEnabledSubstateParam.STOP:
                     self.rotator.stop()
                     self.tracking_timer_task.cancel()
                     self.telemetry.enabled_substate = enums.EnabledSubstate.STATIONARY

@@ -21,8 +21,7 @@
 
 __all__ = ["ControllerState", "EnabledSubstate", "OfflineSubstate",
            "CommandCode", "SetStateParam",
-           "EnabledSetSubstateParam", "OfflineSetSubstateParam",
-           "ApplicationState"]
+           "SetEnabledSubstateParam", "ApplicationState"]
 
 import enum
 from lsst.ts.idl.enums import Rotator
@@ -74,10 +73,14 @@ Called ``OfflineSubStates`` in Moog code.
 
 
 class CommandCode(enum.IntEnum):
-    """Value of ``command.cmd``.
+    """Values for ``command.cmd``.
+
+
+    In the Moog code these are defined in enum cmdType.
+    I have reworded them for clarity.
     """
     SET_STATE = 0x8000
-    SET_SUBSTATE = 0x8002
+    SET_ENABLED_SUBSTATE = 0x8002
     POSITION_SET = 0x8007
     SET_CONSTANT_VEL = 0x800B
     CONFIG_VEL = 0x9001
@@ -101,11 +104,11 @@ class SetStateParam(enum.IntEnum):
     ENTER_CONTROL = enum.auto()
 
 
-class EnabledSetSubstateParam(enum.IntEnum):
+class SetEnabledSubstateParam(enum.IntEnum):
     """Enabled substate parameters.
 
     Values for ``command.param1`` when
-    ``command.cmd = CommandCode.SET_SUBSTATE``
+    ``command.cmd = CommandCode.SET_ENABLED_SUBSTATE``
     and the current state is ``ENABLED``.
 
     Called ``EnabledSubStateTriggers`` in Moog code.
@@ -119,20 +122,6 @@ class EnabledSetSubstateParam(enum.IntEnum):
     CONSTANT_VELOCITY = enum.auto()
     SPARE2 = enum.auto()
     MOVE_LUT = enum.auto()
-
-
-class OfflineSetSubstateParam(enum.IntEnum):
-    """Offline substate command parameters.
-
-    Values for ``command.param1`` when
-    ``command.cmd = CommandCode.SET_SUBSTATE``
-    and the current state is ``OFFLINE``.
-
-    Called ``OfflineSubStateTriggers`` in Moog code.
-    """
-    INVALID = 0
-    PUBLISH_ONLY = enum.auto()
-    AVAILABLE = enum.auto()
 
 
 class ApplicationState(enum.IntFlag):

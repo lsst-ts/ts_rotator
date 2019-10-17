@@ -279,8 +279,8 @@ class RotatorCsc(salobj.Controller):
         command.
         """
         self.assert_enabled_substate(enums.EnabledSubstate.STATIONARY)
-        await self.run_command(cmd=enums.CommandCode.SET_SUBSTATE,
-                               param1=enums.EnabledSetSubstateParam.MOVE_POINT_TO_POINT)
+        await self.run_command(cmd=enums.CommandCode.SET_ENABLED_SUBSTATE,
+                               param1=enums.SetEnabledSubstateParam.MOVE_POINT_TO_POINT)
 
     async def do_moveConstantVelocity(self, data):
         """Move at the speed and for the duration specified by the most recent
@@ -288,8 +288,8 @@ class RotatorCsc(salobj.Controller):
         """
         raise salobj.ExpectedError("Not implemented")
         # self.assert_enabled_substate(enums.EnabledSubstate.STATIONARY)
-        # await self.run_command(cmd=enums.CommandCode.SET_SUBSTATE,
-        #                        param1=enums.EnabledSetSubstateParam.CONSTANT_VELOCITY)
+        # await self.run_command(cmd=enums.CommandCode.SET_ENABLED_SUBSTATE,
+        #                        param1=enums.SetEnabledSubstateParam.CONSTANT_VELOCITY)
 
     async def do_positionSet(self, data):
         """Specify a position for the ``move`` command.
@@ -307,8 +307,8 @@ class RotatorCsc(salobj.Controller):
         """
         if self.summary_state != salobj.State.ENABLED:
             raise salobj.ExpectedError("Not enabled")
-        await self.run_command(cmd=enums.CommandCode.SET_SUBSTATE,
-                               param1=enums.EnabledSetSubstateParam.STOP)
+        await self.run_command(cmd=enums.CommandCode.SET_ENABLED_SUBSTATE,
+                               param1=enums.SetEnabledSubstateParam.STOP)
 
     async def do_test(self, data):
         """Execute the test command. NOT SUPPORTED.
@@ -353,8 +353,8 @@ class RotatorCsc(salobj.Controller):
         until you are done tracking, then issue the ``stop`` command.
         """
         self.assert_enabled_substate(enums.EnabledSubstate.STATIONARY)
-        await self.run_command(cmd=enums.CommandCode.SET_SUBSTATE,
-                               param1=enums.EnabledSetSubstateParam.TRACK)
+        await self.run_command(cmd=enums.CommandCode.SET_ENABLED_SUBSTATE,
+                               param1=enums.SetEnabledSubstateParam.TRACK)
         self._tracking_started_n = 2
 
     async def do_velocitySet(self, data):
