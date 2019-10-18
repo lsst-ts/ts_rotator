@@ -248,7 +248,6 @@ class RotatorCsc(salobj.Controller):
         """
         if self.summary_state != salobj.State.FAULT:
             raise salobj.ExpectedError("Must be in FAULT state.")
-        self.assert_enabled_substate(enums.EnabledSubstate.FAULT)
         # Two sequential commands are needed to clear error
         await self.run_command(cmd=enums.CommandCode.SET_STATE,
                                param1=enums.SetStateParam.CLEAR_ERROR)
