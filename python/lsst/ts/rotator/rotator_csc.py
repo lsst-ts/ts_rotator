@@ -95,6 +95,8 @@ class RotatorCsc(salobj.Controller):
         # immediately after the trackStart, before telemetry is received.
         self._tracking_started_telemetry_counter = 0
         super().__init__(name="Rotator", index=0, do_callbacks=True)
+        self._prev_flags_tracking_success = False
+        self._prev_flags_tracking_lost = False
 
         # Dict of enum.CommandCode: Command
         # with constants set to suitable values.
@@ -474,11 +476,15 @@ class RotatorCsc(salobj.Controller):
             severity=1 if device_error_code else 0,
         )
 
-        if server.telemetry.flags_tracking_success:
-            self.evt_tracking.set_put(force_output=True)
+        if server.telemetry.flags_tracking_success != self._prev_flags_tracking_success:
+            self._prev_flags_tracking_success = server.telemetry.flags_tracking_success
+            if server.telemetry.flags_tracking_success:
+                self.evt_tracking.put()
 
-        if server.telemetry.flags_tracking_lost:
-            self.evt_trackLost.set_put(force_output=True)
+        if server.telemetry.flags_tracking_lost != self._prev_flags_tracking_lost:
+            self._prev_flags_tracking_lost = server.telemetry.flags_tracking_lost
+            if server.telemetry.flags_tracking_lost:
+                self.evt_trackLost.set_put()
 
         safety_interlock = server.telemetry.application_status & Rotator.ApplicationStatus.SAFTEY_INTERLOCK
         self.evt_interlock.set_put(

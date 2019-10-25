@@ -397,7 +397,7 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
             curr_pos = self.rotator.curr_pos
             curr_pos_counts = self.encoder_resolution * curr_pos
             cmd_pos = self.rotator.end_pos
-            in_position = abs(curr_pos - cmd_pos) < self.config.track_success_pos_threshold
+            in_position = False
             self.telemetry.biss_motor_encoder_axis_a = int(curr_pos_counts)
             self.telemetry.biss_motor_encoder_axis_b = int(curr_pos_counts)
             self.telemetry.status_word_drive0 = 0
@@ -415,7 +415,9 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
                 self.log.debug(f"update_telemetry: curr_pos={curr_pos:0.2f}; cmd_pos={cmd_pos:0.2f}; "
                                f"in_position={in_position}")
             self.telemetry.current_pos = curr_pos
-            if self.telemetry.state != Rotator.ControllerState.ENABLED:
+            if self.telemetry.state == Rotator.ControllerState.ENABLED:
+                in_position = abs(curr_pos - cmd_pos) < self.config.track_success_pos_threshold
+            else:
                 self.telemetry.enabled_substate = Rotator.EnabledSubstate.STATIONARY
             if self.telemetry.state != Rotator.ControllerState.OFFLINE:
                 self.telemetry.offline_substate = Rotator.OfflineSubstate.AVAILABLE
