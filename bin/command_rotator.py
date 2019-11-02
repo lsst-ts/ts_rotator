@@ -24,6 +24,16 @@ STD_TIMEOUT = 5  # timeout for command ack
 TRACK_INTERVAL = 0.1  # interval between tracking updates (seconds)
 
 
+def round_any(value, digits=5):
+    """Round any value to the specified number of digits.
+
+    This is a no-op for int and str values.
+    """
+    if isinstance(value, float):
+        return round(value, digits)
+    return value
+
+
 async def stdin_generator():
     """Thanks to http://blog.mathieu-leplatre.info
     """
@@ -45,6 +55,8 @@ class RemoteWatcher:
         self.remote = remote
 
         for name in remote.salinfo.event_names:
+            if name == "heartbeat":
+                continue
             topic = getattr(self.remote, f"evt_{name}")
             func = getattr(self, f"{name}_callback", None)
             if func is None:
@@ -69,13 +81,18 @@ class RemoteWatcher:
                     if not key.startswith("private_") and
                     key not in ("priority", "timestamp"))
 
+    def get_rounded_public_fields(self, data):
+        return dict((key, round_any(value)) for key, value in data.get_vars().items()
+                    if not key.startswith("private_") and
+                    key not in ("priority", "timestamp"))
+
     def event_callback(self, data, name):
         """Generic callback for events."""
         print(f"{name}: {self.format_data(data)}")
 
     def telemetry_callback(self, data, name):
         """Generic callback for telemetry."""
-        public_fields = self.get_public_fields(data)
+        public_fields = self.get_rounded_public_fields(data)
         if public_fields != getattr(self, f"prev_{name}"):
             setattr(self, f"prev_{name}", public_fields)
             print(f"{name}: {self.format_data(data)}")
