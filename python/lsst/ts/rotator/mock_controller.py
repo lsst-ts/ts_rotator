@@ -122,6 +122,8 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
     ----------
     log : `logging.Logger`
         Logger.
+    host : `str` (optional)
+        IP address of CSC server.
     command_port : `int` (optional)
         Command socket port.  This argument is intended for unit tests;
         use the default value for normal operation.
@@ -151,7 +153,10 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
     * I am not sure what the real controller does if a track command is late;
       for now the simulator goes into FAULT.
     """
-    def __init__(self, log, command_port, telemetry_port,
+    def __init__(self, log,
+                 host=hexrotcomm.LOCAL_HOST,
+                 command_port=hexrotcomm.COMMAND_PORT,
+                 telemetry_port=hexrotcomm.TELEMETRY_PORT,
                  initial_state=Rotator.ControllerState.OFFLINE):
         self.encoder_resolution = 200_000  # counts/deg; arbitrary
         config = structs.Config()
@@ -199,7 +204,7 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
             enums.CommandCode.TRACK_VEL_CMD: self.do_track_vel_cmd,
         }
 
-        super().__init__(log=log, config=config, telemetry=telemetry,
+        super().__init__(log=log, config=config, host=host, telemetry=telemetry,
                          command_port=command_port, telemetry_port=telemetry_port)
         self.set_state(initial_state)
 
