@@ -65,7 +65,7 @@ class TestRotatorCsc(asynctest.TestCase):
         wait_connected : `bool`
             If True then wait for the controller to connect.
         """
-        self.csc = rotator.RotatorCsc(initial_state=initial_state, simulation_mode=1)
+        self.csc = rotator.RotatorCsc(initial_state=initial_state, simulation_mode=simulation_mode)
         if len(self.csc.log.handlers) < 2:
             # The first handler is the salobj handler;
             # add a stream handler as well.
