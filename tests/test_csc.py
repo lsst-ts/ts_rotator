@@ -271,7 +271,7 @@ class TestRotatorCsc(asynctest.TestCase):
                                                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY)
         data = await self.remote.tel_Application.next(flush=True, timeout=STD_TIMEOUT)
         self.assertAlmostEqual(data.Demand, 0)
-        self.assertAlmostEqual(data.Position, 0)
+        self.assertAlmostEqual(data.Position, 0, places=4)
         data = await self.remote.evt_inPosition.next(flush=False, timeout=STD_TIMEOUT)
         self.assertFalse(data.inPosition)
         await self.remote.cmd_positionSet.set_start(angle=destination, timeout=STD_TIMEOUT)
@@ -286,7 +286,7 @@ class TestRotatorCsc(asynctest.TestCase):
         await self.assert_next_controller_state(controllerState=Rotator.ControllerState.ENABLED,
                                                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY)
         data = await self.remote.tel_Application.next(flush=True, timeout=STD_TIMEOUT)
-        self.assertAlmostEqual(data.Position, destination)
+        self.assertAlmostEqual(data.Position, destination, places=4)
 
     async def test_stop_move(self):
         """Test stopping a point to point move.
@@ -298,7 +298,7 @@ class TestRotatorCsc(asynctest.TestCase):
                                                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY)
         data = await self.remote.tel_Application.next(flush=True, timeout=STD_TIMEOUT)
         self.assertAlmostEqual(data.Demand, 0)
-        self.assertAlmostEqual(data.Position, 0)
+        self.assertAlmostEqual(data.Position, 0, places=4)
         data = await self.remote.evt_inPosition.next(flush=False, timeout=STD_TIMEOUT)
         self.assertFalse(data.inPosition)
         await self.remote.cmd_positionSet.set_start(angle=destination, timeout=STD_TIMEOUT)
@@ -328,7 +328,7 @@ class TestRotatorCsc(asynctest.TestCase):
                                                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY)
         data = await self.remote.tel_Application.next(flush=True, timeout=STD_TIMEOUT)
         self.assertAlmostEqual(data.Demand, 0)
-        self.assertAlmostEqual(data.Position, 0)
+        self.assertAlmostEqual(data.Position, 0, places=4)
         data = await self.remote.evt_inPosition.next(flush=False, timeout=STD_TIMEOUT)
         self.assertFalse(data.inPosition)
         await self.remote.cmd_trackStart.start(timeout=STD_TIMEOUT)
@@ -422,7 +422,7 @@ class TestRotatorCsc(asynctest.TestCase):
                                                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY)
         data = await self.remote.tel_Application.next(flush=True, timeout=STD_TIMEOUT)
         self.assertAlmostEqual(data.Demand, 0)
-        self.assertAlmostEqual(data.Position, 0)
+        self.assertAlmostEqual(data.Position, 0, places=4)
         data = await self.remote.evt_inPosition.next(flush=False, timeout=STD_TIMEOUT)
         self.assertFalse(data.inPosition)
         await self.remote.cmd_trackStart.start(timeout=STD_TIMEOUT)
@@ -451,7 +451,7 @@ class TestRotatorCsc(asynctest.TestCase):
                                                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY)
         data = await self.remote.tel_Application.next(flush=True, timeout=STD_TIMEOUT)
         self.assertAlmostEqual(data.Demand, 0)
-        self.assertAlmostEqual(data.Position, 0)
+        self.assertAlmostEqual(data.Position, 0, places=4)
         data = await self.remote.evt_inPosition.next(flush=False, timeout=STD_TIMEOUT)
         self.assertFalse(data.inPosition)
         await self.remote.cmd_trackStart.start(timeout=STD_TIMEOUT)

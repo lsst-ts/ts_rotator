@@ -22,6 +22,7 @@ __all__ = ["MockMTRotatorController"]
 
 import asyncio
 import math
+import random
 import time
 
 from lsst.ts import salobj
@@ -290,7 +291,9 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
 
     async def update_telemetry(self):
         try:
-            curr_pos = self.rotator.curr_pos
+            # Add ~0.01 arcsec jitter to the current position, for realism
+            # and to exercise commmand_rotator filtering of jitter.
+            curr_pos = self.rotator.curr_pos + 0.000003*random.random()
             curr_pos_counts = self.encoder_resolution * curr_pos
             cmd_pos = self.rotator.end_pos
             in_position = False
@@ -307,9 +310,6 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
             self.telemetry.copley_fault_status_register = (0, 0)
             self.telemetry.application_status = Rotator.ApplicationStatus.DDS_COMMAND_SOURCE
             self.telemetry.commanded_pos = cmd_pos
-            if self.telemetry.current_pos != curr_pos:
-                self.log.debug(f"update_telemetry: curr_pos={curr_pos:0.2f}; cmd_pos={cmd_pos:0.2f}; "
-                               f"in_position={in_position}")
             self.telemetry.current_pos = curr_pos
             if self.telemetry.state == Rotator.ControllerState.ENABLED:
                 in_position = abs(curr_pos - cmd_pos) < self.config.track_success_pos_threshold
