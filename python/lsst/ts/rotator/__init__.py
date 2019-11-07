@@ -23,6 +23,7 @@ from .constants import *
 from .enums import *
 from .structs import *
 from .mock_controller import *
+from .rotator_commander import *
 from .rotator_csc import *
 
 try:
