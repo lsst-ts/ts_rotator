@@ -19,7 +19,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-__all__ = ["CommandCode", "SetStateParam", "SetEnabledSubstateParam"]
+__all__ = ["CommandCode", "SetEnabledSubstateParam"]
 
 import enum
 
@@ -38,22 +38,6 @@ class CommandCode(enum.IntEnum):
     CONFIG_VEL = 0x9001
     CONFIG_ACCEL = 0x9002
     TRACK_VEL_CMD = 0x9031
-
-
-class SetStateParam(enum.IntEnum):
-    """Values for ``command.param1`` when
-    ``command.cmd = CommandCode.SET_STATE``.
-
-    Called ``TriggerCmds`` in Moog code.
-    """
-    INVALID = 0
-    START = enum.auto()
-    ENABLE = enum.auto()
-    STANDBY = enum.auto()
-    DISABLE = enum.auto()
-    EXIT = enum.auto()
-    CLEAR_ERROR = enum.auto()
-    ENTER_CONTROL = enum.auto()
 
 
 class SetEnabledSubstateParam(enum.IntEnum):
