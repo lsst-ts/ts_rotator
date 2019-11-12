@@ -19,14 +19,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .constants import *
-from .enums import *
-from .structs import *
-from .mock_controller import *
-from .rotator_commander import *
-from .rotator_csc import *
+__all__ = ["MAX_VEL_LIMIT", "MAX_ACCEL_LIMIT", "ROTATOR_SYNC_PATTERN"]
 
-try:
-    from .version import *
-except ImportError:
-    __version__ = "?"
+# Maximum velocity limit (deg/sec)
+MAX_VEL_LIMIT = 3.5
+
+# Maximum acceleration limit (deg/sec^2)
+MAX_ACCEL_LIMIT = 1.0
+
+# Required value of command.sync_pattern for rotator commands.
+ROTATOR_SYNC_PATTERN = 0x5555

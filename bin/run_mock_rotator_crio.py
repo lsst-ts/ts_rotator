@@ -1,6 +1,7 @@
+#!/usr/bin/env python
 # This file is part of ts_rotator.
 #
-# Developed for the LSST Data Management System.
+# Developed for the LSST Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -19,14 +20,23 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .constants import *
-from .enums import *
-from .structs import *
-from .mock_controller import *
-from .rotator_commander import *
-from .rotator_csc import *
+import argparse
+import asyncio
+import logging
 
-try:
-    from .version import *
-except ImportError:
-    __version__ = "?"
+from lsst.ts import rotator
+
+
+async def main():
+    parser = argparse.ArgumentParser(f"Run mock rotator cRIO code")
+    parser.add_argument("host", help="IP address of rotator CSC")
+    args = parser.parse_args()
+
+    log = logging.getLogger("MockRotator")
+    log.addHandler(logging.StreamHandler())
+    log.setLevel(logging.DEBUG)
+    rotator.MockMTRotatorController(log=log, host=args.host)
+    print(f"Mock rotator controller constructed with host={args.host}; waiting forever")
+    await asyncio.Future()
+
+asyncio.run(main())

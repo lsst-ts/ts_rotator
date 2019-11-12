@@ -1,0 +1,16 @@
+$schema: http://json-schema.org/draft-07/schema#
+$id: https://github.com/lsst-ts/ts_rotator/blob/master/schema/rotator.yaml
+# title must end with one or more spaces followed by the schema version, which must begin with "v"
+title: Rotator v1
+description: Schema for Rotator configuration files
+type: object
+properties:
+  rotmax:
+    description: Maximum rotation angle.
+    type: number
+    default: 1
+  rotmin:
+    description: Minimum rotation angle.
+    type: number
+    default: -1
+ 
