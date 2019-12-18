@@ -54,12 +54,12 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         """Test the configureAcceleration command.
         """
         await self.make_csc(initial_state=salobj.State.ENABLED)
-        data = await self.remote.evt_settingsApplied.next(flush=False, timeout=STD_TIMEOUT)
+        data = await self.remote.evt_configuration.next(flush=False, timeout=STD_TIMEOUT)
         initial_limit = data.accelerationLimit
         print("initial_limit=", initial_limit)
         new_limit = initial_limit - 0.1
         await self.remote.cmd_configureAcceleration.set_start(alimit=new_limit, timeout=STD_TIMEOUT)
-        data = await self.remote.evt_settingsApplied.next(flush=False, timeout=STD_TIMEOUT)
+        data = await self.remote.evt_configuration.next(flush=False, timeout=STD_TIMEOUT)
         self.assertAlmostEqual(data.accelerationLimit, new_limit)
 
         for bad_alimit in (-1, 0, rotator.MAX_ACCEL_LIMIT + 0.001):
@@ -72,11 +72,11 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         """Test the configureVelocity command.
         """
         await self.make_csc(initial_state=salobj.State.ENABLED)
-        data = await self.remote.evt_settingsApplied.next(flush=False, timeout=STD_TIMEOUT)
+        data = await self.remote.evt_configuration.next(flush=False, timeout=STD_TIMEOUT)
         initial_limit = data.velocityLimit
         new_limit = initial_limit - 0.1
         await self.remote.cmd_configureVelocity.set_start(vlimit=new_limit, timeout=STD_TIMEOUT)
-        data = await self.remote.evt_settingsApplied.next(flush=False, timeout=STD_TIMEOUT)
+        data = await self.remote.evt_configuration.next(flush=False, timeout=STD_TIMEOUT)
         self.assertAlmostEqual(data.velocityLimit, new_limit)
 
         for bad_vlimit in (0, -1, rotator.MAX_VEL_LIMIT + 0.001):
@@ -198,7 +198,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         await self.assert_next_summary_state(salobj.State.ENABLED)
         await self.assert_next_controller_state(controllerState=Rotator.ControllerState.ENABLED,
                                                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY)
-        settings = await self.remote.evt_settingsApplied.next(flush=False, timeout=STD_TIMEOUT)
+        settings = await self.remote.evt_configuration.next(flush=False, timeout=STD_TIMEOUT)
         await self.remote.cmd_trackStart.start(timeout=STD_TIMEOUT)
         await self.assert_next_controller_state(
             controllerState=Rotator.ControllerState.ENABLED,

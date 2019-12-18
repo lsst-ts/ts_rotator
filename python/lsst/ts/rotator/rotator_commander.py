@@ -162,9 +162,9 @@ For example:
                   f"with amplitude {amplitude} and a period of {period}")
             nelts = int(period / TRACK_INTERVAL)
             vmax = amplitude * 2 * math.pi / period
-            settings = self.remote.evt_settingsApplied.get()
+            settings = self.remote.evt_configuration.get()
             if settings is None:
-                raise RuntimeError("Must wait until settingsApplied seen so we can check max velocity")
+                raise RuntimeError("Must wait until configuration seen so we can check max velocity")
             if abs(vmax) > settings.velocityLimit:
                 raise ValueError(f"maximum velocity {vmax} > allowed {settings.velocityLimit}")
             await self.remote.cmd_trackStart.start(timeout=STD_TIMEOUT)

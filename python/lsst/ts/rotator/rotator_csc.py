@@ -213,7 +213,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         server : `lsst.ts.hexrotcomm.CommandTelemetryServer`
             TCP/IP server.
         """
-        self.evt_settingsApplied.set_put(
+        self.evt_configuration.set_put(
             positionAngleUpperLimit=server.config.upper_pos_limit,
             velocityLimit=server.config.velocity_limit,
             accelerationLimit=server.config.accel_limit,
