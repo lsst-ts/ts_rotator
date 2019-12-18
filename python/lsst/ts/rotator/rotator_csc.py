@@ -117,15 +117,6 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         await self.run_command(cmd=enums.CommandCode.SET_ENABLED_SUBSTATE,
                                param1=enums.SetEnabledSubstateParam.MOVE_POINT_TO_POINT)
 
-    async def do_moveConstantVelocity(self, data):
-        """Move at the speed and for the duration specified by the most recent
-        ``velocitySet`` command. NOT SUPPORTED.
-        """
-        raise salobj.ExpectedError("Not implemented")
-        # self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
-        # await self.run_command(cmd=enums.CommandCode.SET_ENABLED_SUBSTATE,
-        #                        param1=enums.SetEnabledSubstateParam.CONSTANT_VELOCITY)
-
     async def do_positionSet(self, data):
         """Specify a position for the ``move`` command.
         """
@@ -144,18 +135,6 @@ class RotatorCsc(hexrotcomm.BaseCsc):
             raise salobj.ExpectedError("Not enabled")
         await self.run_command(cmd=enums.CommandCode.SET_ENABLED_SUBSTATE,
                                param1=enums.SetEnabledSubstateParam.STOP)
-
-    async def do_test(self, data):
-        """Execute the test command. NOT SUPPORTED.
-        """
-        raise salobj.ExpectedError("Not implemented")
-        # self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
-        # # The test command is unique in that all fields must be left
-        # # at their initialized value except sync_pattern
-        # # (at least that is what the Vendor's code does).
-        # command = structs.Command()
-        # command.sync_pattern = structs.ROTATOR_SYNC_PATTERN
-        # await self.server.run_command(command)
 
     async def do_track(self, data):
         """Specify a position, velocity, TAI time tracking update.
@@ -191,19 +170,6 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         await self.run_command(cmd=enums.CommandCode.SET_ENABLED_SUBSTATE,
                                param1=enums.SetEnabledSubstateParam.TRACK)
         self._tracking_started_telemetry_counter = 2
-
-    async def do_velocitySet(self, data):
-        """Specify the velocity and duration for the ``moveConstantVelocity``
-        command. NOT SUPPORTED.
-        """
-        raise salobj.ExpectedError("Not implemented")
-        # self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
-        # if abs(data.velocity) > self.server.config.velocity_limit:
-        #     raise salobj.ExpectedError(f"Velocity {data.velocity} > "
-        #              f"limit {self.server.config.velocity_limit}")
-        # await self.run_command(cmd=enums.CommandCode.SET_CONSTANT_VEL,
-        #                        param1=data.velocity,
-        #                        param2=data.moveDuration)
 
     def config_callback(self, server):
         """Called when the TCP/IP controller outputs configuration.
