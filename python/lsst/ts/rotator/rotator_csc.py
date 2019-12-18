@@ -234,26 +234,6 @@ class RotatorCsc(hexrotcomm.BaseCsc):
             state=bool(server.telemetry.application_status & Rotator.ApplicationStatus.DDS_COMMAND_SOURCE),
         )
 
-        device_errors = []
-        if server.telemetry.application_status & Rotator.ApplicationStatus.DRIVE_FAULT:
-            device_errors.append("Drive Error")
-        if server.telemetry.flags_following_error:
-            device_errors.append("Following Error")
-        if server.telemetry.application_status & Rotator.ApplicationStatus.EXTEND_LIMIT_SWITCH:
-            device_errors.append("Forward Limit Switch")
-        if server.telemetry.application_status & Rotator.ApplicationStatus.RETRACT_LIMIT_SWITCH:
-            device_errors.append("Reverse Limit Switch")
-        if server.telemetry.application_status & Rotator.ApplicationStatus.ETHERCAT_PROBLEM:
-            device_errors.append("Ethercat Error")
-        if server.telemetry.application_status & Rotator.ApplicationStatus.SIMULINK_FAULT:
-            device_errors.append("Simulink Error")
-        if server.telemetry.application_status & Rotator.ApplicationStatus.ENCODER_FAULT:
-            device_errors.append("Encoder Error")
-        device_error_code = ",".join(device_errors)
-        self.evt_deviceError.set_put(
-            code=device_error_code,
-            device="Rotator",
-            severity=1 if device_error_code else 0,
         )
 
         if server.telemetry.flags_tracking_success != self._prev_flags_tracking_success:
