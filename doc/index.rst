@@ -50,7 +50,7 @@ Contributing
 ``lsst.ts.rotator`` is developed at https://github.com/lsst-ts/ts_rotator.
 You can find Jira issues for this module at `labels=ts_rotator <https://jira.lsstcorp.org/issues/?jql=project%20%3D%20DM%20AND%20labels%20%20%3D%20ts_rotator>`_.
 
-.. .. _lsst.ts.rotator-pyapi:
+.. _lsst.ts.rotator-pyapi:
 
 Python API reference
 ====================
