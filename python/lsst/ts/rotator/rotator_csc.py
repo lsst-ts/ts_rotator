@@ -234,17 +234,10 @@ class RotatorCsc(hexrotcomm.BaseCsc):
             state=bool(server.telemetry.application_status & Rotator.ApplicationStatus.DDS_COMMAND_SOURCE),
         )
 
+        self.evt_tracking.set_put(
+            tracking=server.telemetry.flags_tracking_success,
+            lost=server.telemetry.flags_tracking_lost,
         )
-
-        if server.telemetry.flags_tracking_success != self._prev_flags_tracking_success:
-            self._prev_flags_tracking_success = server.telemetry.flags_tracking_success
-            if server.telemetry.flags_tracking_success:
-                self.evt_tracking.put()
-
-        if server.telemetry.flags_tracking_lost != self._prev_flags_tracking_lost:
-            self._prev_flags_tracking_lost = server.telemetry.flags_tracking_lost
-            if server.telemetry.flags_tracking_lost:
-                self.evt_trackLost.set_put()
 
         safety_interlock = server.telemetry.application_status & Rotator.ApplicationStatus.SAFTEY_INTERLOCK
         self.evt_interlock.set_put(
