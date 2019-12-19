@@ -98,7 +98,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
         if not 0 < data.alimit <= constants.MAX_ACCEL_LIMIT:
             raise salobj.ExpectedError(f"alimit={data.alimit} must be > 0 and <= {constants.MAX_ACCEL_LIMIT}")
-        await self.run_command(cmd=enums.CommandCode.CONFIG_ACCEL,
+        await self.run_command(code=enums.CommandCode.CONFIG_ACCEL,
                                param1=data.alimit)
 
     async def do_configureVelocity(self, data):
@@ -106,7 +106,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
         if not 0 < data.vlimit <= constants.MAX_VEL_LIMIT:
             raise salobj.ExpectedError(f"vlimit={data.vlimit} must be > 0 and <= {constants.MAX_VEL_LIMIT}")
-        await self.run_command(cmd=enums.CommandCode.CONFIG_VEL,
+        await self.run_command(code=enums.CommandCode.CONFIG_VEL,
                                param1=data.vlimit)
 
     async def do_move(self, data):
@@ -114,26 +114,22 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         command.
         """
         self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
-        await self.run_command(cmd=enums.CommandCode.SET_ENABLED_SUBSTATE,
-                               param1=enums.SetEnabledSubstateParam.MOVE_POINT_TO_POINT)
-
-    async def do_positionSet(self, data):
-        """Specify a position for the ``move`` command.
-        """
-        self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
-        if not self.server.config.lower_pos_limit <= data.angle <= self.server.config.upper_pos_limit:
-            raise salobj.ExpectedError(f"angle {data.angle} not in range "
+        if not self.server.config.lower_pos_limit <= data.position <= self.server.config.upper_pos_limit:
+            raise salobj.ExpectedError(f"position {data.position} not in range "
                                        f"[{self.server.config.lower_pos_limit}, "
                                        f"{self.server.config.upper_pos_limit}]")
-        await self.run_command(cmd=enums.CommandCode.POSITION_SET,
-                               param1=data.angle)
+        cmd1 = self.make_command(code=enums.CommandCode.POSITION_SET,
+                                 param1=data.position)
+        cmd2 = self.make_command(code=enums.CommandCode.SET_ENABLED_SUBSTATE,
+                                 param1=enums.SetEnabledSubstateParam.MOVE_POINT_TO_POINT)
+        await self.run_multiple_commands(cmd1, cmd2)
 
     async def do_stop(self, data):
         """Halt tracking or any other motion.
         """
         if self.summary_state != salobj.State.ENABLED:
             raise salobj.ExpectedError("Not enabled")
-        await self.run_command(cmd=enums.CommandCode.SET_ENABLED_SUBSTATE,
+        await self.run_command(code=enums.CommandCode.SET_ENABLED_SUBSTATE,
                                param1=enums.SetEnabledSubstateParam.STOP)
 
     async def do_track(self, data):
@@ -155,7 +151,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         if not abs(data.velocity) <= self.server.config.velocity_limit:
             raise salobj.ExpectedError(f"abs(velocity={data.velocity}) > "
                                        f"[{self.server.config.velocity_limit}")
-        await self.run_command(cmd=enums.CommandCode.TRACK_VEL_CMD,
+        await self.run_command(code=enums.CommandCode.TRACK_VEL_CMD,
                                param1=data.tai,
                                param2=data.angle,
                                param3=data.velocity)
@@ -167,7 +163,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         until you are done tracking, then issue the ``stop`` command.
         """
         self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
-        await self.run_command(cmd=enums.CommandCode.SET_ENABLED_SUBSTATE,
+        await self.run_command(code=enums.CommandCode.SET_ENABLED_SUBSTATE,
                                param1=enums.SetEnabledSubstateParam.TRACK)
         self._tracking_started_telemetry_counter = 2
 
