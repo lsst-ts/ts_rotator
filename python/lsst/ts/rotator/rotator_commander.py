@@ -119,7 +119,7 @@ For example:
         if np.array_equal(self.previous_tel_motors, rounded_value):
             return
         self.previous_tel_motors = rounded_value
-        print(f"Motors: {self.format_data(data)}")
+        print(f"motors: {self.format_data(data)}")
 
     async def _ramp(self, start_position, end_position, velocity):
         try:
