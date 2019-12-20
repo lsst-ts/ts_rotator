@@ -28,7 +28,7 @@ from lsst.ts import rotator
 
 
 async def main():
-    parser = argparse.ArgumentParser(f"Run mock rotator cRIO code")
+    parser = argparse.ArgumentParser(f"Run mock rotator PXI code")
     parser.add_argument("host", help="IP address of rotator CSC")
     args = parser.parse_args()
 
