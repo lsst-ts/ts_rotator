@@ -213,16 +213,16 @@ class RotatorCsc(hexrotcomm.BaseCsc):
             Position=server.telemetry.current_pos,
             Error=server.telemetry.commanded_pos - server.telemetry.current_pos,
         )
-        self.tel_Electrical.set_put(
-            CopleyStatusWordDrive=[server.telemetry.status_word_drive0,
+        self.tel_electrical.set_put(
+            copleyStatusWordDrive=[server.telemetry.status_word_drive0,
                                    server.telemetry.status_word_drive0_axis_b],
-            CopleyLatchingFaultStatus=[server.telemetry.latching_fault_status_register,
+            copleyLatchingFaultStatus=[server.telemetry.latching_fault_status_register,
                                        server.telemetry.latching_fault_status_register_axis_b],
         )
-        self.tel_Motors.set_put(
-            Calibrated=[server.telemetry.state_estimation_ch_a_fb,
+        self.tel_motors.set_put(
+            calibrated=[server.telemetry.state_estimation_ch_a_fb,
                         server.telemetry.state_estimation_ch_b_fb],
-            Raw=[server.telemetry.state_estimation_ch_a_motor_encoder,
+            raw=[server.telemetry.state_estimation_ch_a_motor_encoder,
                  server.telemetry.state_estimation_ch_b_motor_encoder],
         )
 
