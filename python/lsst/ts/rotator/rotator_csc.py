@@ -123,6 +123,10 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         cmd2 = self.make_command(code=enums.CommandCode.SET_ENABLED_SUBSTATE,
                                  param1=enums.SetEnabledSubstateParam.MOVE_POINT_TO_POINT)
         await self.run_multiple_commands(cmd1, cmd2)
+        self.evt_target.set_put(position=data.position,
+                                velocity=0,
+                                tai=salobj.current_tai(),
+                                force_output=True)
 
     async def do_stop(self, data):
         """Halt tracking or any other motion.
@@ -155,6 +159,10 @@ class RotatorCsc(hexrotcomm.BaseCsc):
                                param1=data.tai,
                                param2=data.angle,
                                param3=data.velocity)
+        self.evt_target.set_put(position=data.angle,
+                                velocity=data.velocity,
+                                tai=data.tai,
+                                force_output=True)
 
     async def do_trackStart(self, data):
         """Start tracking.

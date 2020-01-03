@@ -100,6 +100,12 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         self.assertFalse(data.inPosition)
         t0 = time.monotonic()
         await self.remote.cmd_move.set_start(position=destination, timeout=STD_TIMEOUT)
+        data = await self.remote.evt_target.next(flush=False, timeout=STD_TIMEOUT)
+        target_event_delay = time.monotonic() - t0
+        self.assertAlmostEqual(data.position, destination)
+        self.assertEqual(data.velocity, 0)
+        target_time_difference = salobj.current_tai() - data.tai
+        self.assertLessEqual(abs(target_time_difference), target_event_delay)
         await self.assert_next_controller_state(
             controllerState=Rotator.ControllerState.ENABLED,
             enabledSubstate=Rotator.EnabledSubstate.MOVING_POINT_TO_POINT)
@@ -165,6 +171,10 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
                 dt = tai - t0
                 pos = pos0 + vel*dt
                 await self.remote.cmd_track.set_start(angle=pos, velocity=vel, tai=tai, timeout=STD_TIMEOUT)
+                data = await self.remote.evt_target.next(timeout=STD_TIMEOUT)
+                self.assertAlmostEqual(data.position, pos)
+                self.assertAlmostEqual(data.velocity, vel)
+                self.assertAlmostEqual(data.tai, tai)
                 data = await self.remote.tel_Application.next(flush=True, timeout=STD_TIMEOUT)
                 self.assertAlmostEqual(data.Demand, pos)
                 await asyncio.sleep(0.1)
