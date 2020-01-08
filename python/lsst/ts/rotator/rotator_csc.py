@@ -98,7 +98,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
         if not 0 < data.alimit <= constants.MAX_ACCEL_LIMIT:
             raise salobj.ExpectedError(f"alimit={data.alimit} must be > 0 and <= {constants.MAX_ACCEL_LIMIT}")
-        await self.run_command(cmd=enums.CommandCode.CONFIG_ACCEL,
+        await self.run_command(code=enums.CommandCode.CONFIG_ACCEL,
                                param1=data.alimit)
 
     async def do_configureVelocity(self, data):
@@ -106,7 +106,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
         if not 0 < data.vlimit <= constants.MAX_VEL_LIMIT:
             raise salobj.ExpectedError(f"vlimit={data.vlimit} must be > 0 and <= {constants.MAX_VEL_LIMIT}")
-        await self.run_command(cmd=enums.CommandCode.CONFIG_VEL,
+        await self.run_command(code=enums.CommandCode.CONFIG_VEL,
                                param1=data.vlimit)
 
     async def do_move(self, data):
@@ -114,48 +114,27 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         command.
         """
         self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
-        await self.run_command(cmd=enums.CommandCode.SET_ENABLED_SUBSTATE,
-                               param1=enums.SetEnabledSubstateParam.MOVE_POINT_TO_POINT)
-
-    async def do_moveConstantVelocity(self, data):
-        """Move at the speed and for the duration specified by the most recent
-        ``velocitySet`` command. NOT SUPPORTED.
-        """
-        raise salobj.ExpectedError("Not implemented")
-        # self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
-        # await self.run_command(cmd=enums.CommandCode.SET_ENABLED_SUBSTATE,
-        #                        param1=enums.SetEnabledSubstateParam.CONSTANT_VELOCITY)
-
-    async def do_positionSet(self, data):
-        """Specify a position for the ``move`` command.
-        """
-        self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
-        if not self.server.config.lower_pos_limit <= data.angle <= self.server.config.upper_pos_limit:
-            raise salobj.ExpectedError(f"angle {data.angle} not in range "
+        if not self.server.config.lower_pos_limit <= data.position <= self.server.config.upper_pos_limit:
+            raise salobj.ExpectedError(f"position {data.position} not in range "
                                        f"[{self.server.config.lower_pos_limit}, "
                                        f"{self.server.config.upper_pos_limit}]")
-        await self.run_command(cmd=enums.CommandCode.POSITION_SET,
-                               param1=data.angle)
+        cmd1 = self.make_command(code=enums.CommandCode.POSITION_SET,
+                                 param1=data.position)
+        cmd2 = self.make_command(code=enums.CommandCode.SET_ENABLED_SUBSTATE,
+                                 param1=enums.SetEnabledSubstateParam.MOVE_POINT_TO_POINT)
+        await self.run_multiple_commands(cmd1, cmd2)
+        self.evt_target.set_put(position=data.position,
+                                velocity=0,
+                                tai=salobj.current_tai(),
+                                force_output=True)
 
     async def do_stop(self, data):
         """Halt tracking or any other motion.
         """
         if self.summary_state != salobj.State.ENABLED:
             raise salobj.ExpectedError("Not enabled")
-        await self.run_command(cmd=enums.CommandCode.SET_ENABLED_SUBSTATE,
+        await self.run_command(code=enums.CommandCode.SET_ENABLED_SUBSTATE,
                                param1=enums.SetEnabledSubstateParam.STOP)
-
-    async def do_test(self, data):
-        """Execute the test command. NOT SUPPORTED.
-        """
-        raise salobj.ExpectedError("Not implemented")
-        # self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
-        # # The test command is unique in that all fields must be left
-        # # at their initialized value except sync_pattern
-        # # (at least that is what the Vendor's code does).
-        # command = structs.Command()
-        # command.sync_pattern = structs.ROTATOR_SYNC_PATTERN
-        # await self.server.run_command(command)
 
     async def do_track(self, data):
         """Specify a position, velocity, TAI time tracking update.
@@ -176,10 +155,14 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         if not abs(data.velocity) <= self.server.config.velocity_limit:
             raise salobj.ExpectedError(f"abs(velocity={data.velocity}) > "
                                        f"[{self.server.config.velocity_limit}")
-        await self.run_command(cmd=enums.CommandCode.TRACK_VEL_CMD,
+        await self.run_command(code=enums.CommandCode.TRACK_VEL_CMD,
                                param1=data.tai,
                                param2=data.angle,
                                param3=data.velocity)
+        self.evt_target.set_put(position=data.angle,
+                                velocity=data.velocity,
+                                tai=data.tai,
+                                force_output=True)
 
     async def do_trackStart(self, data):
         """Start tracking.
@@ -188,22 +171,9 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         until you are done tracking, then issue the ``stop`` command.
         """
         self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
-        await self.run_command(cmd=enums.CommandCode.SET_ENABLED_SUBSTATE,
+        await self.run_command(code=enums.CommandCode.SET_ENABLED_SUBSTATE,
                                param1=enums.SetEnabledSubstateParam.TRACK)
         self._tracking_started_telemetry_counter = 2
-
-    async def do_velocitySet(self, data):
-        """Specify the velocity and duration for the ``moveConstantVelocity``
-        command. NOT SUPPORTED.
-        """
-        raise salobj.ExpectedError("Not implemented")
-        # self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
-        # if abs(data.velocity) > self.server.config.velocity_limit:
-        #     raise salobj.ExpectedError(f"Velocity {data.velocity} > "
-        #              f"limit {self.server.config.velocity_limit}")
-        # await self.run_command(cmd=enums.CommandCode.SET_CONSTANT_VEL,
-        #                        param1=data.velocity,
-        #                        param2=data.moveDuration)
 
     def config_callback(self, server):
         """Called when the TCP/IP controller outputs configuration.
@@ -213,7 +183,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         server : `lsst.ts.hexrotcomm.CommandTelemetryServer`
             TCP/IP server.
         """
-        self.evt_settingsApplied.set_put(
+        self.evt_configuration.set_put(
             positionAngleUpperLimit=server.config.upper_pos_limit,
             velocityLimit=server.config.velocity_limit,
             accelerationLimit=server.config.accel_limit,
@@ -247,16 +217,16 @@ class RotatorCsc(hexrotcomm.BaseCsc):
             Position=server.telemetry.current_pos,
             Error=server.telemetry.commanded_pos - server.telemetry.current_pos,
         )
-        self.tel_Electrical.set_put(
-            CopleyStatusWordDrive=[server.telemetry.status_word_drive0,
+        self.tel_electrical.set_put(
+            copleyStatusWordDrive=[server.telemetry.status_word_drive0,
                                    server.telemetry.status_word_drive0_axis_b],
-            CopleyLatchingFaultStatus=[server.telemetry.latching_fault_status_register,
+            copleyLatchingFaultStatus=[server.telemetry.latching_fault_status_register,
                                        server.telemetry.latching_fault_status_register_axis_b],
         )
-        self.tel_Motors.set_put(
-            Calibrated=[server.telemetry.state_estimation_ch_a_fb,
+        self.tel_motors.set_put(
+            calibrated=[server.telemetry.state_estimation_ch_a_fb,
                         server.telemetry.state_estimation_ch_b_fb],
-            Raw=[server.telemetry.state_estimation_ch_a_motor_encoder,
+            raw=[server.telemetry.state_estimation_ch_a_motor_encoder,
                  server.telemetry.state_estimation_ch_b_motor_encoder],
         )
 
@@ -268,37 +238,10 @@ class RotatorCsc(hexrotcomm.BaseCsc):
             state=bool(server.telemetry.application_status & Rotator.ApplicationStatus.DDS_COMMAND_SOURCE),
         )
 
-        device_errors = []
-        if server.telemetry.application_status & Rotator.ApplicationStatus.DRIVE_FAULT:
-            device_errors.append("Drive Error")
-        if server.telemetry.flags_following_error:
-            device_errors.append("Following Error")
-        if server.telemetry.application_status & Rotator.ApplicationStatus.EXTEND_LIMIT_SWITCH:
-            device_errors.append("Forward Limit Switch")
-        if server.telemetry.application_status & Rotator.ApplicationStatus.RETRACT_LIMIT_SWITCH:
-            device_errors.append("Reverse Limit Switch")
-        if server.telemetry.application_status & Rotator.ApplicationStatus.ETHERCAT_PROBLEM:
-            device_errors.append("Ethercat Error")
-        if server.telemetry.application_status & Rotator.ApplicationStatus.SIMULINK_FAULT:
-            device_errors.append("Simulink Error")
-        if server.telemetry.application_status & Rotator.ApplicationStatus.ENCODER_FAULT:
-            device_errors.append("Encoder Error")
-        device_error_code = ",".join(device_errors)
-        self.evt_deviceError.set_put(
-            code=device_error_code,
-            device="Rotator",
-            severity=1 if device_error_code else 0,
+        self.evt_tracking.set_put(
+            tracking=server.telemetry.flags_tracking_success,
+            lost=server.telemetry.flags_tracking_lost,
         )
-
-        if server.telemetry.flags_tracking_success != self._prev_flags_tracking_success:
-            self._prev_flags_tracking_success = server.telemetry.flags_tracking_success
-            if server.telemetry.flags_tracking_success:
-                self.evt_tracking.put()
-
-        if server.telemetry.flags_tracking_lost != self._prev_flags_tracking_lost:
-            self._prev_flags_tracking_lost = server.telemetry.flags_tracking_lost
-            if server.telemetry.flags_tracking_lost:
-                self.evt_trackLost.set_put()
 
         safety_interlock = server.telemetry.application_status & Rotator.ApplicationStatus.SAFTEY_INTERLOCK
         self.evt_interlock.set_put(

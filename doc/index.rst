@@ -11,12 +11,12 @@ This code is a front end for a low level controller written by Moog.
 
 How to start the system:
 
-* Turn on the rotator cRIO if it is not already running.
+* Turn on the rotator PXI if it is not already running.
 * Start the rotator CSC.
 * Wait for the ``connected`` event to report ``command=True`` and ``telemetry=True``.
-  This should happen quickly; if it does not then check that the cRIO is fully booted up and configured to use the correct IP address for the CSC.
+  This should happen quickly; if it does not then check that the PXI is fully booted up and configured to use the correct IP address for the CSC.
 * Check the ``controllerState`` event.
-  If it is ``state=Offline, offline_substate=PublishOnly``, which is the state the cRIO wakes up in, you must use the vendor's engineering user interface (EUI) to change the state to ``state=Offline, offline_substate=Available`` (or any more enabled mode).
+  If it is ``state=Offline, offline_substate=PublishOnly``, which is the state the PXI wakes up in, you must use the vendor's engineering user interface (EUI) to change the state to ``state=Offline, offline_substate=Available`` (or any more enabled mode).
   You can set the state on the main panel.
 * Check the ``commandableByDDS`` event.
   If ``state=False`` then you must use the EUI to change the control mode from ``GUI`` to ``DDS``.
@@ -50,7 +50,7 @@ Contributing
 ``lsst.ts.rotator`` is developed at https://github.com/lsst-ts/ts_rotator.
 You can find Jira issues for this module at `labels=ts_rotator <https://jira.lsstcorp.org/issues/?jql=project%20%3D%20DM%20AND%20labels%20%20%3D%20ts_rotator>`_.
 
-.. .. _lsst.ts.rotator-pyapi:
+.. _lsst.ts.rotator-pyapi:
 
 Python API reference
 ====================

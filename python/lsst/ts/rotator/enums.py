@@ -25,7 +25,7 @@ import enum
 
 
 class CommandCode(enum.IntEnum):
-    """Values for ``command.cmd``.
+    """Values for ``Command.code``.
 
 
     In the Moog code these are defined in enum cmdType.
@@ -43,8 +43,8 @@ class CommandCode(enum.IntEnum):
 class SetEnabledSubstateParam(enum.IntEnum):
     """Enabled substate parameters.
 
-    Values for ``command.param1`` when
-    ``command.cmd = CommandCode.SET_ENABLED_SUBSTATE``
+    Values for ``Command.param1`` when
+    ``Command.code = CommandCode.SET_ENABLED_SUBSTATE``
     and the current state is ``ENABLED``.
 
     Called ``EnabledSubStateTriggers`` in Moog code.
