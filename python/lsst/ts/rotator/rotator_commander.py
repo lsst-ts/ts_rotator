@@ -63,8 +63,7 @@ State transitions commands (none take arguments):
 Other commands and arguments:
 * configureAcceleration max_acceleration    # Set maximum acceleration
 * configureVelocity max_velocity            # Set maximum velocity
-* positionSet position  # Set a position for the move command
-* move                  # Move to the position set by positionSet
+* move position         # Move to the specified position
 * stop                  # Send the stop command and stop any existing ramp or sine.
 * trackStart            # Put the controller into the FAULT state
                         # (due to lack of position, velocity, time updates).
@@ -72,8 +71,7 @@ Other commands and arguments:
 Units are degrees and degrees/second
 
 For example:
-  positionSet 5
-  move
+  move 5
   stop  # In case you want to stop the move early
   exit""")
 
@@ -89,13 +87,9 @@ For example:
         kwargs = self.check_arguments(args, "vlimit")
         await self.remote.cmd_configureVelocity.set_start(**kwargs, timeout=STD_TIMEOUT)
 
-    async def do_positionSet(self, args):
-        kwargs = self.check_arguments(args, "angle")
-        await self.remote.cmd_positionSet.set_start(**kwargs, timeout=STD_TIMEOUT)
-
     async def do_move(self, args):
-        self.check_arguments(args)
-        await self.remote.cmd_move.start(timeout=STD_TIMEOUT)
+        kwargs = self.check_arguments(args, "position")
+        await self.remote.cmd_move.set_start(**kwargs, timeout=STD_TIMEOUT)
 
     async def do_stop(self, args):
         # For safety don't check arguments, just *stop*
@@ -120,12 +114,12 @@ For example:
         kwargs = self.check_arguments(args, "start_position", "amplitude", "period")
         self.tracking_task = asyncio.ensure_future(self._sine(**kwargs))
 
-    async def tel_Motors_callback(self, data):
-        rounded_value = np.around(data.Calibrated, decimals=3)
-        if np.array_equal(self.previous_tel_Motors, rounded_value):
+    async def tel_motors_callback(self, data):
+        rounded_value = np.around(data.calibrated, decimals=3)
+        if np.array_equal(self.previous_tel_motors, rounded_value):
             return
-        self.previous_tel_Motors = rounded_value
-        print(f"Motors: {self.format_data(data)}")
+        self.previous_tel_motors = rounded_value
+        print(f"motors: {self.format_data(data)}")
 
     async def _ramp(self, start_position, end_position, velocity):
         try:
@@ -141,11 +135,10 @@ For example:
             await self.remote.cmd_trackStart.start(timeout=STD_TIMEOUT)
             for i in range(nelts):
                 pos = start_position + i*dpos
-                await self.remote.cmd_track.set_start(
-                    angle=pos,
-                    velocity=velocity,
-                    tai=salobj.current_tai(),
-                    timeout=STD_TIMEOUT)
+                await self.remote.cmd_track.set_start(angle=pos,
+                                                      velocity=velocity,
+                                                      tai=salobj.current_tai(),
+                                                      timeout=STD_TIMEOUT)
                 await asyncio.sleep(TRACK_INTERVAL)
         except asyncio.CancelledError:
             print(f"ramp cancelled")
@@ -162,9 +155,9 @@ For example:
                   f"with amplitude {amplitude} and a period of {period}")
             nelts = int(period / TRACK_INTERVAL)
             vmax = amplitude * 2 * math.pi / period
-            settings = self.remote.evt_settingsApplied.get()
+            settings = self.remote.evt_configuration.get()
             if settings is None:
-                raise RuntimeError("Must wait until settingsApplied seen so we can check max velocity")
+                raise RuntimeError("Must wait until configuration seen so we can check max velocity")
             if abs(vmax) > settings.velocityLimit:
                 raise ValueError(f"maximum velocity {vmax} > allowed {settings.velocityLimit}")
             await self.remote.cmd_trackStart.start(timeout=STD_TIMEOUT)

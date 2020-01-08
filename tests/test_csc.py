@@ -47,19 +47,19 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
 
     async def test_standard_state_transitions(self):
         enabled_commands = ("configureVelocity", "configureAcceleration",
-                            "move", "positionSet", "stop", "trackStart")
+                            "move", "stop", "trackStart")
         await self.check_standard_state_transitions(enabled_commands=enabled_commands)
 
     async def test_configure_acceleration(self):
         """Test the configureAcceleration command.
         """
         await self.make_csc(initial_state=salobj.State.ENABLED)
-        data = await self.remote.evt_settingsApplied.next(flush=False, timeout=STD_TIMEOUT)
+        data = await self.remote.evt_configuration.next(flush=False, timeout=STD_TIMEOUT)
         initial_limit = data.accelerationLimit
         print("initial_limit=", initial_limit)
         new_limit = initial_limit - 0.1
         await self.remote.cmd_configureAcceleration.set_start(alimit=new_limit, timeout=STD_TIMEOUT)
-        data = await self.remote.evt_settingsApplied.next(flush=False, timeout=STD_TIMEOUT)
+        data = await self.remote.evt_configuration.next(flush=False, timeout=STD_TIMEOUT)
         self.assertAlmostEqual(data.accelerationLimit, new_limit)
 
         for bad_alimit in (-1, 0, rotator.MAX_ACCEL_LIMIT + 0.001):
@@ -72,11 +72,11 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         """Test the configureVelocity command.
         """
         await self.make_csc(initial_state=salobj.State.ENABLED)
-        data = await self.remote.evt_settingsApplied.next(flush=False, timeout=STD_TIMEOUT)
+        data = await self.remote.evt_configuration.next(flush=False, timeout=STD_TIMEOUT)
         initial_limit = data.velocityLimit
         new_limit = initial_limit - 0.1
         await self.remote.cmd_configureVelocity.set_start(vlimit=new_limit, timeout=STD_TIMEOUT)
-        data = await self.remote.evt_settingsApplied.next(flush=False, timeout=STD_TIMEOUT)
+        data = await self.remote.evt_configuration.next(flush=False, timeout=STD_TIMEOUT)
         self.assertAlmostEqual(data.velocityLimit, new_limit)
 
         for bad_vlimit in (0, -1, rotator.MAX_VEL_LIMIT + 0.001):
@@ -85,7 +85,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
                     await self.remote.cmd_configureVelocity.set_start(vlimit=bad_vlimit, timeout=STD_TIMEOUT)
 
     async def test_move(self):
-        """Test the positionSet and move commands for point to point motion.
+        """Test the move command for point to point motion.
         """
         destination = 2  # a small move so the test runs quickly
         # Estimated time to move; a crude estimate used for timeouts
@@ -98,15 +98,20 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         self.assertAlmostEqual(data.Position, 0, places=4)
         data = await self.remote.evt_inPosition.next(flush=False, timeout=STD_TIMEOUT)
         self.assertFalse(data.inPosition)
-        await self.remote.cmd_positionSet.set_start(angle=destination, timeout=STD_TIMEOUT)
-        t0 = time.time()
-        await self.remote.cmd_move.start(timeout=STD_TIMEOUT)
+        t0 = time.monotonic()
+        await self.remote.cmd_move.set_start(position=destination, timeout=STD_TIMEOUT)
+        data = await self.remote.evt_target.next(flush=False, timeout=STD_TIMEOUT)
+        target_event_delay = time.monotonic() - t0
+        self.assertAlmostEqual(data.position, destination)
+        self.assertEqual(data.velocity, 0)
+        target_time_difference = salobj.current_tai() - data.tai
+        self.assertLessEqual(abs(target_time_difference), target_event_delay)
         await self.assert_next_controller_state(
             controllerState=Rotator.ControllerState.ENABLED,
             enabledSubstate=Rotator.EnabledSubstate.MOVING_POINT_TO_POINT)
         data = await self.remote.evt_inPosition.next(flush=False, timeout=STD_TIMEOUT+est_move_duration)
         self.assertTrue(data.inPosition)
-        print(f"Move duration: {time.time() - t0:0.2f} seconds")
+        print(f"Move duration: {time.monotonic() - t0:0.2f} seconds")
         await self.assert_next_controller_state(controllerState=Rotator.ControllerState.ENABLED,
                                                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY)
         data = await self.remote.tel_Application.next(flush=True, timeout=STD_TIMEOUT)
@@ -125,8 +130,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         self.assertAlmostEqual(data.Position, 0, places=4)
         data = await self.remote.evt_inPosition.next(flush=False, timeout=STD_TIMEOUT)
         self.assertFalse(data.inPosition)
-        await self.remote.cmd_positionSet.set_start(angle=destination, timeout=STD_TIMEOUT)
-        await self.remote.cmd_move.start(timeout=STD_TIMEOUT)
+        await self.remote.cmd_move.set_start(position=destination, timeout=STD_TIMEOUT)
         await self.assert_next_controller_state(
             controllerState=Rotator.ControllerState.ENABLED,
             enabledSubstate=Rotator.EnabledSubstate.MOVING_POINT_TO_POINT)
@@ -159,16 +163,20 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         await self.assert_next_controller_state(
             controllerState=Rotator.ControllerState.ENABLED,
             enabledSubstate=Rotator.EnabledSubstate.SLEWING_OR_TRACKING)
-        st = time.time()
+        st = time.monotonic()
 
         async def track():
             while True:
-                t = salobj.current_tai()
-                dt = t - t0
+                tai = salobj.current_tai()
+                dt = tai - t0
                 pos = pos0 + vel*dt
-                await self.remote.cmd_track.set_start(angle=pos, velocity=vel, tai=t, timeout=STD_TIMEOUT)
+                await self.remote.cmd_track.set_start(angle=pos, velocity=vel, tai=tai, timeout=STD_TIMEOUT)
+                data = await self.remote.evt_target.next(timeout=STD_TIMEOUT)
+                self.assertAlmostEqual(data.position, pos)
+                self.assertAlmostEqual(data.velocity, vel)
+                self.assertAlmostEqual(data.tai, tai)
                 data = await self.remote.tel_Application.next(flush=True, timeout=STD_TIMEOUT)
-                self.assertAlmostEqual(pos, data.Demand)
+                self.assertAlmostEqual(data.Demand, pos)
                 await asyncio.sleep(0.1)
 
         t0 = salobj.current_tai()
@@ -179,7 +187,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         finally:
             track_task.cancel()
 
-        elt = time.time() - st
+        elt = time.monotonic() - st
         print(f"Slew duration: {elt:0.2} seconds")
 
         await self.remote.cmd_stop.start(timeout=STD_TIMEOUT)
@@ -198,7 +206,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         await self.assert_next_summary_state(salobj.State.ENABLED)
         await self.assert_next_controller_state(controllerState=Rotator.ControllerState.ENABLED,
                                                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY)
-        settings = await self.remote.evt_settingsApplied.next(flush=False, timeout=STD_TIMEOUT)
+        settings = await self.remote.evt_configuration.next(flush=False, timeout=STD_TIMEOUT)
         await self.remote.cmd_trackStart.start(timeout=STD_TIMEOUT)
         await self.assert_next_controller_state(
             controllerState=Rotator.ControllerState.ENABLED,
