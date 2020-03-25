@@ -27,6 +27,7 @@ import ctypes
 class Config(ctypes.Structure):
     """Configuration: rotConfigTelemetryStreamStructure_t in Moog code.
     """
+
     _pack_ = 1
     _fields_ = [
         ("velocity_limit", ctypes.c_double),
@@ -47,6 +48,7 @@ class Telemetry(ctypes.Structure):
     Note that application_status is a bit mask whose bits are
     defined starting with ROTTLMSYNCPATTERN in Moog code.
     """
+
     _pack_ = 1
     _fields_ = [
         ("biss_motor_encoder_axis_a", ctypes.c_uint),
