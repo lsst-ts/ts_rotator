@@ -73,7 +73,8 @@ Units are degrees and degrees/second
 For example:
   move 5
   stop  # In case you want to stop the move early
-  exit""")
+  exit""",
+        )
 
     async def close(self):
         self.tracking_task.cancel()
@@ -81,7 +82,9 @@ For example:
 
     async def do_configureAcceleration(self, args):
         kwargs = self.check_arguments(args, "alimit")
-        await self.remote.cmd_configureAcceleration.set_start(**kwargs, timeout=STD_TIMEOUT)
+        await self.remote.cmd_configureAcceleration.set_start(
+            **kwargs, timeout=STD_TIMEOUT
+        )
 
     async def do_configureVelocity(self, args):
         kwargs = self.check_arguments(args, "vlimit")
@@ -104,7 +107,9 @@ For example:
         """Track from start_position to end_position at the specified velocity.
         """
         self.tracking_task.cancel()
-        kwargs = self.check_arguments(args, "start_position", "end_position", "velocity")
+        kwargs = self.check_arguments(
+            args, "start_position", "end_position", "velocity"
+        )
         self.tracking_task = asyncio.ensure_future(self._ramp(**kwargs))
 
     async def do_sine(self, args):
@@ -128,17 +133,21 @@ For example:
             dt = (end_position - start_position) / velocity
             if dt < 0:
                 raise ValueError(f"velocity {velocity} has the wrong sign")
-            print(f"starting tracking a ramp from {start_position} to {end_position} at velocity {velocity}; "
-                  f"this will take {dt:0.2f} seconds")
+            print(
+                f"starting tracking a ramp from {start_position} to {end_position} at velocity {velocity}; "
+                f"this will take {dt:0.2f} seconds"
+            )
             dpos = velocity * TRACK_INTERVAL
             nelts = int(dt / TRACK_INTERVAL)
             await self.remote.cmd_trackStart.start(timeout=STD_TIMEOUT)
             for i in range(nelts):
-                pos = start_position + i*dpos
-                await self.remote.cmd_track.set_start(angle=pos,
-                                                      velocity=velocity,
-                                                      tai=salobj.current_tai(),
-                                                      timeout=STD_TIMEOUT)
+                pos = start_position + i * dpos
+                await self.remote.cmd_track.set_start(
+                    angle=pos,
+                    velocity=velocity,
+                    tai=salobj.current_tai(),
+                    timeout=STD_TIMEOUT,
+                )
                 await asyncio.sleep(TRACK_INTERVAL)
         except asyncio.CancelledError:
             print(f"ramp cancelled")
@@ -151,24 +160,32 @@ For example:
         try:
             if period <= 0:
                 raise ValueError(f"period {period} must be positive")
-            print(f"starting tracking one cycle of a sine wave centered at {start_position} "
-                  f"with amplitude {amplitude} and a period of {period}")
+            print(
+                f"starting tracking one cycle of a sine wave centered at {start_position} "
+                f"with amplitude {amplitude} and a period of {period}"
+            )
             nelts = int(period / TRACK_INTERVAL)
             vmax = amplitude * 2 * math.pi / period
             settings = self.remote.evt_configuration.get()
             if settings is None:
-                raise RuntimeError("Must wait until configuration seen so we can check max velocity")
+                raise RuntimeError(
+                    "Must wait until configuration seen so we can check max velocity"
+                )
             if abs(vmax) > settings.velocityLimit:
-                raise ValueError(f"maximum velocity {vmax} > allowed {settings.velocityLimit}")
+                raise ValueError(
+                    f"maximum velocity {vmax} > allowed {settings.velocityLimit}"
+                )
             await self.remote.cmd_trackStart.start(timeout=STD_TIMEOUT)
             for i in range(nelts):
-                angle_rad = 2*math.pi*i/nelts
-                pos = amplitude*math.sin(angle_rad) + start_position
-                velocity = vmax*math.cos(angle_rad)
-                await self.remote.cmd_track.set_start(angle=pos,
-                                                      velocity=velocity,
-                                                      tai=salobj.current_tai(),
-                                                      timeout=STD_TIMEOUT)
+                angle_rad = 2 * math.pi * i / nelts
+                pos = amplitude * math.sin(angle_rad) + start_position
+                velocity = vmax * math.cos(angle_rad)
+                await self.remote.cmd_track.set_start(
+                    angle=pos,
+                    velocity=velocity,
+                    tai=salobj.current_tai(),
+                    timeout=STD_TIMEOUT,
+                )
                 await asyncio.sleep(TRACK_INTERVAL)
         except asyncio.CancelledError:
             print(f"sine cancelled")
