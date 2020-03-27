@@ -31,6 +31,7 @@ class CommandCode(enum.IntEnum):
     In the Moog code these are defined in enum cmdType.
     I have reworded them for clarity.
     """
+
     SET_STATE = 0x8000
     SET_ENABLED_SUBSTATE = 0x8002
     POSITION_SET = 0x8007
@@ -49,6 +50,7 @@ class SetEnabledSubstateParam(enum.IntEnum):
 
     Called ``EnabledSubStateTriggers`` in Moog code.
     """
+
     ENABLED_INVALID = 0
     MOVE_POINT_TO_POINT = enum.auto()
     TRACK = enum.auto()

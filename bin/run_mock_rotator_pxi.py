@@ -39,4 +39,5 @@ async def main():
     print(f"Mock rotator controller constructed with host={args.host}; waiting forever")
     await asyncio.Future()
 
+
 asyncio.run(main())
