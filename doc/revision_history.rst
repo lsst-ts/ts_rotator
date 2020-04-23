@@ -13,9 +13,9 @@ Update `MockMTRotatorController` to use the ``TrackingActuator`` from ts_simactu
 Formerly `MockMTRotatorController` used a locally defined point to point actuator, which gives somewhat lower fidelity and duplicates code in ts_simactuators.
 Requires:
 
-* ts_hexrotcomm v0.2.0
+* ts_hexrotcomm 0.2
 * ts_salobj 5
-* ts_simactuators v1
+* ts_simactuators 1
 * ts_idl 1
 * ts_xml 4.6
 * Rotator IDL files, e.g. made using ``make_idl_files.py Rotator``
@@ -31,7 +31,7 @@ Major changes:
 
 Requires:
 
-* ts_hexrotcomm v0.2.0
+* ts_hexrotcomm 0.2
 * ts_salobj 5
 * ts_idl 1
 * ts_xml 4.6
@@ -46,7 +46,7 @@ Tested with the rotator.
 
 Requires:
 
-* ts_hexrotcomm v0.2.0
+* ts_hexrotcomm 0.2
 * ts_salobj 5
 * ts_idl 1
 * ts_xml 4.6
@@ -59,7 +59,7 @@ Still not fully tested with the real rotator.
 
 Requires:
 
-* ts_hexrotcomm v0.1.0
+* ts_hexrotcomm 0.1
 * ts_salobj 5
 * ts_idl 1
 * Rotator IDL files, e.g. made using ``make_idl_files.py Rotator``
