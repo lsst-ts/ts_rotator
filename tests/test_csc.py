@@ -177,7 +177,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         self.assertGreater(data.Position, 0)
         self.assertLess(data.Position, destination)
 
-    async def test_track(self):
+    async def test_track_good(self):
         """Test the trackStart and track commands.
         """
         pos0 = 2  # a small move so the slew ends quickly
