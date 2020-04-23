@@ -202,30 +202,37 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         st = time.monotonic()
 
         async def track():
+            tai0 = salobj.current_tai()
             while True:
                 tai = salobj.current_tai()
-                dt = tai - t0
+                dt = tai - tai0
                 pos = pos0 + vel * dt
                 await self.remote.cmd_track.set_start(
                     angle=pos, velocity=vel, tai=tai, timeout=STD_TIMEOUT
                 )
-                data = await self.remote.evt_target.next(timeout=STD_TIMEOUT)
+                data = await self.remote.evt_target.next(
+                    flush=False, timeout=STD_TIMEOUT
+                )
                 self.assertAlmostEqual(data.position, pos)
                 self.assertAlmostEqual(data.velocity, vel)
                 self.assertAlmostEqual(data.tai, tai)
                 data = await self.remote.tel_Application.next(
                     flush=True, timeout=STD_TIMEOUT
                 )
-                self.assertAlmostEqual(data.Demand, pos)
+                tslop = salobj.current_tai() - tai
+                pos_slop = vel * tslop
+                self.assertAlmostEqual(data.Demand, pos, delta=pos_slop)
                 await asyncio.sleep(0.1)
 
-        t0 = salobj.current_tai()
         track_task = asyncio.create_task(track())
         try:
             data = await self.remote.evt_inPosition.next(
                 flush=False, timeout=STD_TIMEOUT + est_slew_duration
             )
             self.assertTrue(data.inPosition)
+            # Make sure the track task did not fail.
+            if track_task.done():
+                self.fail(f"Track task failed: {track_task.exception()}")
         finally:
             track_task.cancel()
 
@@ -286,7 +293,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
                 # Send a valid pvt to reset the tracking timer
                 # and give the controller time to deal with it.
                 await self.remote.cmd_track.set_start(
-                    angle=0, velocity=0, tai=curr_tai, timeout=STD_TIMEOUT
+                    angle=0, velocity=0, tai=salobj.current_tai(), timeout=STD_TIMEOUT
                 )
                 await asyncio.sleep(0.01)
 
