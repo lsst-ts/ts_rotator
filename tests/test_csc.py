@@ -318,6 +318,10 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
             controllerState=Rotator.ControllerState.ENABLED,
             enabledSubstate=Rotator.EnabledSubstate.SLEWING_OR_TRACKING,
         )
+        # Send a tracking position
+        await self.remote.cmd_track.set_start(
+            angle=0, velocity=0, tai=salobj.current_tai(), timeout=STD_TIMEOUT
+        )
         # Wait a bit longer than usual to allow the tracking timer to expire.
         await self.assert_next_summary_state(
             salobj.State.FAULT, timeout=STD_TIMEOUT + 1

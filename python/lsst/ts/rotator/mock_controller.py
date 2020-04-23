@@ -271,7 +271,6 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
         self.assert_stationary()
         self.telemetry.enabled_substate = Rotator.EnabledSubstate.SLEWING_OR_TRACKING
         self.tracking_timer_task.cancel()
-        self.tracking_timer_task = asyncio.create_task(self.tracking_timer())
 
     async def do_stop(self, command):
         self.assert_state(Rotator.ControllerState.ENABLED)
