@@ -23,10 +23,10 @@ __all__ = ["MockMTRotatorController"]
 import asyncio
 import math
 import random
-import time
 
 from lsst.ts import salobj
 from lsst.ts import hexrotcomm
+from lsst.ts import simactuators
 from lsst.ts.idl.enums import Rotator
 from . import constants
 from . import enums
@@ -35,86 +35,6 @@ from . import structs
 # Maximum time between track commands (seconds)
 # The real controller may use 0.15
 TRACK_TIMEOUT = 1
-
-
-class Actuator:
-    """Model an actuator that moves between given limits at constant velocity.
-
-    Information is computed on request. This works because the system being
-    modeled can only be polled.
-    """
-
-    def __init__(self, min_pos, max_pos, pos, speed):
-        assert speed > 0
-        self.min_pos = min_pos
-        self.max_pos = max_pos
-        self._start_pos = pos
-        self._start_time = time.monotonic()
-        self._end_pos = pos
-        self._end_time = time.monotonic()
-        self.speed = speed
-
-    @property
-    def start_pos(self):
-        """Start position of move."""
-        return self._start_pos
-
-    @property
-    def end_pos(self):
-        """End position of move."""
-        return self._end_pos
-
-    def set_pos(self, pos):
-        """Set a new desired position."""
-        if pos < self.min_pos or pos > self.max_pos:
-            raise ValueError(f"pos={pos} not in range [{self.min_pos}, {self.max_pos}]")
-        self._start_pos = self.curr_pos
-        self._start_time = time.monotonic()
-        self._end_pos = pos
-        dtime = self._move_duration()
-        self._end_time = self._start_time + dtime
-
-    def _move_duration(self):
-        return abs(self.end_pos - self.start_pos) / self.speed
-
-    @property
-    def curr_pos(self):
-        """Current position."""
-        curr_time = time.monotonic()
-        if curr_time > self._end_time:
-            return self.end_pos
-        else:
-            dtime = curr_time - self._start_time
-            return self.start_pos + self.direction * self.speed * dtime
-
-    @property
-    def direction(self):
-        """1 if moving or moved to greater position, -1 otherwise."""
-        return 1 if self.end_pos >= self.start_pos else -1
-
-    @property
-    def moving(self):
-        """Is the axis moving?"""
-        return time.monotonic() < self._end_time
-
-    def stop(self):
-        """Stop motion instantly.
-
-        Set start_pos and end_pos to the current position
-        and start_time and end_time to the current time.
-        """
-        curr_pos = self.curr_pos
-        curr_time = time.monotonic()
-        self._start_pos = curr_pos
-        self._start_time = curr_time
-        self._end_pos = curr_pos
-        self._end_time = curr_time
-
-    @property
-    def remaining_time(self):
-        """Remaining time for this move (sec)."""
-        duration = self._end_time - time.monotonic()
-        return max(duration, 0)
 
 
 class MockMTRotatorController(hexrotcomm.BaseMockController):
@@ -178,11 +98,12 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
         telemetry.set_pos = math.nan
         self.tracking_timer_task = salobj.make_done_future()
 
-        self.rotator = Actuator(
-            min_pos=config.lower_pos_limit,
-            max_pos=config.upper_pos_limit,
-            pos=0,
-            speed=config.velocity_limit,
+        self.rotator = simactuators.TrackingActuator(
+            min_position=config.lower_pos_limit,
+            max_position=config.upper_pos_limit,
+            max_velocity=config.velocity_limit,
+            max_acceleration=config.accel_limit,
+            dtmax_track=0.25,
         )
         # Set True when the first TRACK_VEL_CMD command is received
         # and False when not tracking. Used to delay setting
@@ -271,7 +192,6 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
         self.assert_stationary()
         self.telemetry.enabled_substate = Rotator.EnabledSubstate.SLEWING_OR_TRACKING
         self.tracking_timer_task.cancel()
-        self.tracking_timer_task = asyncio.create_task(self.tracking_timer())
 
     async def do_stop(self, command):
         self.assert_state(Rotator.ControllerState.ENABLED)
@@ -284,7 +204,9 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
             raise RuntimeError(
                 "Must call POSITION_SET before calling MOVE_POINT_TO_POINT"
             )
-        self.rotator.set_pos(self.telemetry.set_pos)
+        self.rotator.set_target(
+            tai=salobj.current_tai(), position=self.telemetry.set_pos, velocity=0
+        )
         self.telemetry.enabled_substate = Rotator.EnabledSubstate.MOVING_POINT_TO_POINT
         self.telemetry.flags_pt2pt_move_complete = 0
 
@@ -301,7 +223,7 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
                 f"fault: commanded position {curr_pos} not in range "
                 f"[{self.config.lower_pos_limit}, {self.config.upper_pos_limit}]"
             )
-        self.rotator.set_pos(curr_pos)
+        self.rotator.set_target(tai=tai, position=pos, velocity=vel)
         self.tracking_timer_task.cancel()
         self.tracking_timer_task = asyncio.create_task(self.tracking_timer())
         self.track_vel_cmd_seen = True
@@ -319,9 +241,11 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
         try:
             # Add ~0.01 arcsec jitter to the current position, for realism
             # and to exercise commmand_rotator filtering of jitter.
-            curr_pos = self.rotator.curr_pos + 0.000003 * random.random()
+            curr_tai = salobj.current_tai()
+            curr_segment = self.rotator.path.at(curr_tai)
+            curr_pos = curr_segment.position + 0.000003 * random.random()
             curr_pos_counts = self.encoder_resolution * curr_pos
-            cmd_pos = self.rotator.end_pos
+            cmd_pos = self.rotator.target.at(curr_tai).position
             in_position = False
             self.telemetry.biss_motor_encoder_axis_a = int(curr_pos_counts)
             self.telemetry.biss_motor_encoder_axis_b = int(curr_pos_counts)
@@ -340,6 +264,9 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
             self.telemetry.commanded_pos = cmd_pos
             self.telemetry.current_pos = curr_pos
             if self.telemetry.state == Rotator.ControllerState.ENABLED:
+                # Use config parameter `track_success_pos_threshold` to
+                # compute `in_position`, instead of `self.rotator.path.kind`,
+                # so that tracking success varies with the config parameter.
                 in_position = (
                     abs(curr_pos - cmd_pos) < self.config.track_success_pos_threshold
                 )
