@@ -11,7 +11,7 @@ __version__ = "{version}"
 
 setup(
     name="ts_rotator",
-    description="Object-oriented interface to LSST SAL communications middleware.",
+    description="CSC for main telescope camera rotator",
     use_scm_version={
         "write_to": "python/lsst/ts/rotator/version.py",
         "write_to_template": scm_version_template,
@@ -21,7 +21,11 @@ setup(
     package_dir={"": "python"},
     packages=find_namespace_packages(where="python"),
     package_data={"": ["*.rst", "*.yaml"]},
-    scripts=["bin/run_rotator.py"],
+    scripts=[
+        "bin/run_rotator.py",
+        "bin/run_mock_rotator_pxi.py",
+        "bin/command_rotator.py",
+    ],
     tests_require=tests_require,
     extras_require={"dev": dev_requires},
     license="GPL",
