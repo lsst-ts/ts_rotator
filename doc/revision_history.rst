@@ -6,6 +6,13 @@
 ts_rotator Revision History
 ###########################
 
+v0.4.1
+======
+
+* Include conda package build configuration.
+* Added a Jenkinsfile to support continuous integration and to build conda packages.
+* Remove unused schema file.
+
 v0.4.0
 ======
 
