@@ -6,6 +6,13 @@
 ts_rotator Revision History
 ###########################
 
+v0.4.3
+======
+
+* Fix flake8 violations.
+* Improve Jenkins.conda build script so it will label PRs and branches packages as dev and upload them to anaconda.
+
+
 v0.4.2
 ======
 
