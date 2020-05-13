@@ -6,6 +6,12 @@
 ts_rotator Revision History
 ###########################
 
+v0.4.2
+======
+
+* Fix flake8 violations.
+* Add Jenkinsfile for CI job.
+
 v0.4.1
 ======
 
