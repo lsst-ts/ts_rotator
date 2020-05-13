@@ -150,7 +150,7 @@ For example:
                 )
                 await asyncio.sleep(TRACK_INTERVAL)
         except asyncio.CancelledError:
-            print(f"ramp cancelled")
+            print("ramp cancelled")
         except Exception as e:
             print(f"ramp failed: {e}")
         finally:
@@ -188,7 +188,7 @@ For example:
                 )
                 await asyncio.sleep(TRACK_INTERVAL)
         except asyncio.CancelledError:
-            print(f"sine cancelled")
+            print("sine cancelled")
         except Exception as e:
             print(f"sine failed: {e}")
         finally:
