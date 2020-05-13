@@ -6,6 +6,12 @@
 ts_rotator Revision History
 ###########################
 
+v0.4.3
+======
+
+* Fix flake8 violations.
+
+
 v0.4.2
 ======
 
