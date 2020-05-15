@@ -1,10 +1,10 @@
 .. py:currentmodule:: lsst.ts.rotator
 
-.. _lsst.ts.rotator.revision_history:
+.. _lsst.ts.rotator.version_history:
 
-################
-Revision History
-################
+###############
+Version History
+###############
 
 v0.4.4
 ======
