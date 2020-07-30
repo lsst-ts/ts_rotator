@@ -6,6 +6,22 @@
 Version History
 ###############
 
+v0.5.0
+======
+
+Changes
+
+* Make `RotatorCsc` configurable.
+
+Requires:
+
+* ts_hexrotcomm 0.7
+* ts_salobj 5.11
+* ts_simactuators 1
+* ts_idl 1
+* ts_xml 4.6
+* Rotator IDL files, e.g. made using ``make_idl_files.py Rotator``
+
 v0.4.4
 ======
 
@@ -23,7 +39,6 @@ Requires:
 * ts_idl 1
 * ts_xml 4.6
 * Rotator IDL files, e.g. made using ``make_idl_files.py Rotator``
-
 
 v0.4.3
 ======
