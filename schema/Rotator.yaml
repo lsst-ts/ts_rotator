@@ -1,0 +1,6 @@
+$schema: http://json-schema.org/draft-07/schema#
+$id: https://github.com/lsst-ts/ts_rotator/tree/schema/Rotator.yaml
+title: Rotator v1
+description: Configuration for Rotator, which has no configuration.
+type: object
+additionalProperties: false

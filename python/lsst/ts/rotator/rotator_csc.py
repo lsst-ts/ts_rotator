@@ -22,6 +22,7 @@
 __all__ = ["RotatorCsc"]
 
 import argparse
+import pathlib
 
 from lsst.ts import salobj
 from lsst.ts import hexrotcomm
@@ -64,10 +65,6 @@ class RotatorCsc(hexrotcomm.BaseCsc):
     """
 
     def __init__(self, initial_state=salobj.State.OFFLINE, simulation_mode=0):
-        self._initial_state = salobj.State(initial_state)
-        if simulation_mode not in (0, 1):
-            raise ValueError(f"simulation_mode = {simulation_mode}; must be 0 or 1")
-        self.simulation_mode = simulation_mode
         self.server = None
         self.mock_ctrl = None
         # Set this to 2 when trackStart is called, then decrement
@@ -79,6 +76,9 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         self._prev_flags_tracking_success = False
         self._prev_flags_tracking_lost = False
 
+        schema_path = (
+            pathlib.Path(__file__).parents[4].joinpath("schema", "Rotator.yaml")
+        )
         super().__init__(
             name="Rotator",
             index=0,
@@ -86,6 +86,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
             CommandCode=enums.CommandCode,
             ConfigClass=structs.Config,
             TelemetryClass=structs.Telemetry,
+            schema_path=schema_path,
             initial_state=initial_state,
             simulation_mode=simulation_mode,
         )
@@ -94,7 +95,9 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         await super().start()
         self.evt_inPosition.set_put(inPosition=False, force_output=True)
 
-    # Rotator-specific commands.
+    async def configure(self, config):
+        pass
+
     async def do_configureAcceleration(self, data):
         """Specify the acceleration limit."""
         self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
