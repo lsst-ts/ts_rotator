@@ -38,6 +38,10 @@ class RotatorCsc(hexrotcomm.BaseCsc):
 
     Parameters
     ----------
+    config_dir : `str`, optional
+        Directory of configuration files, or None for the standard
+        configuration directory (obtained from `_get_default_config_dir`).
+        This is provided for unit testing.
     initial_state : `lsst.ts.salobj.State` or `int` (optional)
         The initial state of the CSC. Ignored (other than checking
         that it is a valid value) except in simulation mode,
@@ -64,7 +68,9 @@ class RotatorCsc(hexrotcomm.BaseCsc):
     * The simulation mode can only be set at construction time.
     """
 
-    def __init__(self, initial_state=salobj.State.OFFLINE, simulation_mode=0):
+    def __init__(
+        self, config_dir=None, initial_state=salobj.State.OFFLINE, simulation_mode=0
+    ):
         self.server = None
         self.mock_ctrl = None
         # Set this to 2 when trackStart is called, then decrement
@@ -87,6 +93,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
             ConfigClass=structs.Config,
             TelemetryClass=structs.Telemetry,
             schema_path=schema_path,
+            config_dir=config_dir,
             initial_state=initial_state,
             simulation_mode=simulation_mode,
         )
