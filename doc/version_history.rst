@@ -6,6 +6,25 @@
 Version History
 ###############
 
+v0.6.0
+======
+
+Changes
+
+* Added missing ``config_dir`` constructor argument to `RotatorCsc`.
+* Use `lsst.ts.salobj.BaseCscTestCase` and `lsst.ts.salobj.CscCommander` instead of the versions in ts_hexrotcomm.
+* Add attribute ``position_jitter`` to `MockMTRotatorController` and update the unit tests to use it.
+  Also make test_move more robust by giving the slew more time to finish.
+
+Requires:
+
+* ts_hexrotcomm 0.7
+* ts_salobj 5.11
+* ts_simactuators 1
+* ts_idl 1
+* ts_xml 4.6
+* Rotator IDL files, e.g. made using ``make_idl_files.py Rotator``
+
 v0.5.0
 ======
 
