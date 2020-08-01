@@ -130,7 +130,9 @@ class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
                 flush=True, timeout=STD_TIMEOUT
             )
             self.assertAlmostEqual(data.Demand, 0)
-            self.assertAlmostEqual(data.Position, 0, places=4)
+            self.assertAlmostEqual(
+                data.Position, 0, delta=self.csc.mock_ctrl.position_jitter
+            )
             data = await self.remote.evt_inPosition.next(
                 flush=False, timeout=STD_TIMEOUT
             )
@@ -160,10 +162,16 @@ class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
                 controllerState=Rotator.ControllerState.ENABLED,
                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY,
             )
-            data = await self.remote.tel_Application.next(
-                flush=True, timeout=STD_TIMEOUT
+            # Read a few telemetry samples to allow the
+            # slew to truly finish.
+            for i in range(3):
+                data = await self.remote.tel_Application.next(
+                    flush=True, timeout=STD_TIMEOUT
+                )
+            self.assertAlmostEqual(data.Demand, destination)
+            self.assertAlmostEqual(
+                data.Position, destination, delta=self.csc.mock_ctrl.position_jitter
             )
-            self.assertAlmostEqual(data.Position, destination, places=4)
 
     async def test_stop_move(self):
         """Test stopping a point to point move.
@@ -180,7 +188,9 @@ class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
                 flush=True, timeout=STD_TIMEOUT
             )
             self.assertAlmostEqual(data.Demand, 0)
-            self.assertAlmostEqual(data.Position, 0, places=4)
+            self.assertAlmostEqual(
+                data.Position, 0, delta=self.csc.mock_ctrl.position_jitter
+            )
             data = await self.remote.evt_inPosition.next(
                 flush=False, timeout=STD_TIMEOUT
             )
@@ -225,7 +235,9 @@ class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
                 flush=True, timeout=STD_TIMEOUT
             )
             self.assertAlmostEqual(data.Demand, 0)
-            self.assertAlmostEqual(data.Position, 0, places=4)
+            self.assertAlmostEqual(
+                data.Position, 0, delta=self.csc.mock_ctrl.position_jitter
+            )
             data = await self.remote.evt_inPosition.next(
                 flush=False, timeout=STD_TIMEOUT
             )
@@ -356,7 +368,9 @@ class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
                 flush=True, timeout=STD_TIMEOUT
             )
             self.assertAlmostEqual(data.Demand, 0)
-            self.assertAlmostEqual(data.Position, 0, places=4)
+            self.assertAlmostEqual(
+                data.Position, 0, delta=self.csc.mock_ctrl.position_jitter
+            )
             data = await self.remote.evt_inPosition.next(
                 flush=False, timeout=STD_TIMEOUT
             )
@@ -404,7 +418,9 @@ class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
                 flush=True, timeout=STD_TIMEOUT
             )
             self.assertAlmostEqual(data.Demand, 0)
-            self.assertAlmostEqual(data.Position, 0, places=4)
+            self.assertAlmostEqual(
+                data.Position, 0, delta=self.csc.mock_ctrl.position_jitter
+            )
             data = await self.remote.evt_inPosition.next(
                 flush=False, timeout=STD_TIMEOUT
             )
