@@ -6,6 +6,27 @@
 Version History
 ###############
 
+v0.7.0
+======
+
+Changes
+
+* Updated to read telemetry from a newer version of the low-level controller: changes added in https://jira.lsstcorp.org/browse/DM-25994.
+* Updated to write new event and telemetry information added in ts_xml 6.2.
+* Use corrected spelling of ``Rotator.ApplicationStatus.SAFETY_INTERLOCK``.
+  This requires ts_idl 1.4 or later.
+* Updated the git pre-commit hook to prevent the commit if black formatting needed.
+  This encourages the user to properly commit the necessary reformatting.
+
+Requires:
+
+* ts_hexrotcomm 0.7
+* ts_salobj 5.11
+* ts_simactuators 1
+* ts_idl 1.4
+* ts_xml 6.2
+* Rotator IDL files, e.g. made using ``make_idl_files.py Rotator``
+
 v0.6.0
 ======
 

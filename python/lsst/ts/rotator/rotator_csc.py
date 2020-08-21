@@ -244,6 +244,11 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         server : `lsst.ts.hexrotcomm.CommandTelemetryServer`
             TCP/IP server.
         """
+        # TODO DM-26384: use the new timestamp in the telemetry from
+        # the low-level controller, instead of this time.
+        # Also consider computing actual velocity using delta position
+        # and that (presumably accurate) timestamp.
+        curr_tai = salobj.current_tai()
         if self._tracking_started_telemetry_counter > 0:
             self._tracking_started_telemetry_counter -= 1
         self.evt_summaryState.set_put(summaryState=self.summary_state)
@@ -261,6 +266,20 @@ class RotatorCsc(hexrotcomm.BaseCsc):
             Demand=server.telemetry.commanded_pos,
             Position=server.telemetry.current_pos,
             Error=server.telemetry.commanded_pos - server.telemetry.current_pos,
+        )
+        self.tel_rotation.set_put(
+            demandPosition=server.telemetry.commanded_pos,
+            demandVelocity=server.telemetry.commanded_vel,
+            demandAcceleration=server.telemetry.commanded_accel,
+            actualPosition=server.telemetry.current_pos,
+            actualVelocity=(
+                server.telemetry.current_vel_ch_a_fb
+                + server.telemetry.current_vel_ch_a_fb
+            )
+            / 2,
+            debugActualVelocityA=server.telemetry.current_vel_ch_a_fb,
+            debugActualVelocityB=server.telemetry.current_vel_ch_a_fb,
+            timestamp=curr_tai,
         )
         self.tel_electrical.set_put(
             copleyStatusWordDrive=[
@@ -298,11 +317,12 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         self.evt_tracking.set_put(
             tracking=server.telemetry.flags_tracking_success,
             lost=server.telemetry.flags_tracking_lost,
+            noNewCommand=server.telemetry.flags_no_new_track_cmd_error,
         )
 
         safety_interlock = (
             server.telemetry.application_status
-            & Rotator.ApplicationStatus.SAFTEY_INTERLOCK
+            & Rotator.ApplicationStatus.SAFETY_INTERLOCK
         )
         self.evt_interlock.set_put(
             detail="Engaged" if safety_interlock else "Disengaged",

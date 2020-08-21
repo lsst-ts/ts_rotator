@@ -88,6 +88,8 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
         # Amplitude of jitter in measured position (deg),
         # to simulate encoder jitter.
         self.position_jitter = 0.000003
+
+        self.tracking_timed_out = False
         config = structs.Config()
         config.velocity_limit = 3  # deg/sec
         config.accel_limit = 1  # deg/sec^2
@@ -184,6 +186,10 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
         self.config.accel_limit = command.param1
         await self.write_config()
 
+    async def do_clearError(self, data):
+        super().do_clearError(data)
+        self.tracking_timed_out = False
+
     async def do_constant_velocity(self, command):
         raise RuntimeError("The mock controller does not support CONSTANT_VELOCITY")
 
@@ -238,6 +244,7 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
         """
         await asyncio.sleep(TRACK_TIMEOUT)
         self.log.error("Tracking timer expired; going to FAULT")
+        self.tracking_timed_out = True
         self.set_state(Rotator.ControllerState.FAULT)
 
     async def update_telemetry(self):
@@ -250,30 +257,32 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
                 random.random() - 0.5
             )
             curr_pos_counts = self.encoder_resolution * curr_pos
-            cmd_pos = self.rotator.target.at(curr_tai).position
+            cmd_target = self.rotator.target.at(curr_tai)
             in_position = False
             self.telemetry.biss_motor_encoder_axis_a = int(curr_pos_counts)
             self.telemetry.biss_motor_encoder_axis_b = int(curr_pos_counts)
             self.telemetry.status_word_drive0 = 0
             self.telemetry.status_word_drive0_axis_b = 0
-            self.telemetry.status_word_drive1 = 0
             self.telemetry.latching_fault_status_register = 0
             self.telemetry.latching_fault_status_register_axis_b = 0
             self.telemetry.input_pin_states = 0
-            self.telemetry.actual_torque_axis_a = 0
-            self.telemetry.actual_torque_axis_b = 0
             self.telemetry.copley_fault_status_register = (0, 0)
             self.telemetry.application_status = (
                 Rotator.ApplicationStatus.DDS_COMMAND_SOURCE
             )
-            self.telemetry.commanded_pos = cmd_pos
+            self.telemetry.commanded_pos = cmd_target.position
+            self.telemetry.commanded_vel = cmd_target.velocity
+            self.telemetry.commanded_accel = cmd_target.acceleration
             self.telemetry.current_pos = curr_pos
+            self.telemetry.current_vel_ch_a_fb = curr_segment.velocity
+            self.telemetry.current_vel_ch_b_fb = curr_segment.velocity
             if self.telemetry.state == Rotator.ControllerState.ENABLED:
                 # Use config parameter `track_success_pos_threshold` to
                 # compute `in_position`, instead of `self.rotator.path.kind`,
                 # so that tracking success varies with the config parameter.
                 in_position = (
-                    abs(curr_pos - cmd_pos) < self.config.track_success_pos_threshold
+                    abs(curr_pos - cmd_target.position)
+                    < self.config.track_success_pos_threshold
                 )
             else:
                 self.telemetry.enabled_substate = Rotator.EnabledSubstate.STATIONARY
@@ -306,6 +315,7 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
             self.telemetry.flags_tracking_success = in_position
             self.telemetry.flags_position_feedback_fault = 0
             self.telemetry.flags_tracking_lost = 0
+            self.telemetry.flags_no_new_track_cmd_error = self.tracking_timed_out
             self.telemetry.state_estimation_ch_a_fb = 0
             self.telemetry.state_estimation_ch_b_fb = 0
             self.telemetry.state_estimation_ch_a_motor_encoder = 0
