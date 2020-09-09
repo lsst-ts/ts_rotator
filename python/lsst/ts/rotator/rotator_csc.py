@@ -178,6 +178,14 @@ class RotatorCsc(hexrotcomm.BaseCsc):
                     f"{self.server.telemetry.enabled_substate} "
                     f"instead of {Rotator.EnabledSubstate.SLEWING_OR_TRACKING}"
                 )
+
+        # As an experiment ignore queued commands and use the latest.
+        # Note: ts_salobj has no public way to flush the queue
+        # when there is a callback. If we want to do nicely then
+        # we'll have to change that.
+        self.cmd_track._data_queue.clear()
+        data = self.cmd_track.get()
+
         dt = data.tai - salobj.current_tai()
         curr_pos = data.angle + data.velocity * dt
         if (
