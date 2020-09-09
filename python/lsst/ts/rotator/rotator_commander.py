@@ -25,83 +25,28 @@ import math
 import numpy as np
 
 from lsst.ts import salobj
-from lsst.ts import hexrotcomm
 
 STD_TIMEOUT = 5  # timeout for command ack
 
 TRACK_INTERVAL = 0.1  # interval between tracking updates (seconds)
 
 
-class RotatorCommander(hexrotcomm.CscCommander):
-    def __init__(self):
+class RotatorCommander(salobj.CscCommander):
+    def __init__(self, enable):
         self.tracking_task = asyncio.Future()
         super().__init__(
-            name="Rotator",
-            index=0,
-            help_text="""Special commands:
-* exit  # Quit the interpreter, after stopping existing motion.
-* help  # Print this help.
-* ramp start_position end_position velocity
-        # Track a constant velocity ramp from start_position
-        # to end_position at the specified velocity.
-        # This stops any existing ramp or sine.
-* sine start_position amplitude period
-        # Track one cycle of a sine wave centered at start_position,
-        # with the specified amplitude (half the full range of motion)
-        # and period (sec).
-        # This stops any existing ramp or sine.
-
-State transitions commands (none take arguments):
-* enterControl
-* start
-* enable
-* disable
-* standby
-* exitControl
-* clearError
-
-Other commands and arguments:
-* configureAcceleration max_acceleration    # Set maximum acceleration
-* configureVelocity max_velocity            # Set maximum velocity
-* move position         # Move to the specified position
-* stop                  # Send the stop command and stop any existing ramp or sine.
-* trackStart            # Put the controller into the FAULT state
-                        # (due to lack of position, velocity, time updates).
-
-Units are degrees and degrees/second
-
-For example:
-  move 5
-  stop  # In case you want to stop the move early
-  exit""",
+            name="Rotator", index=0, enable=enable,
         )
+        self.help_dict["ramp"] = "start_position end_position velocity "
+        "# track a path of constant",
+        self.help_dict["sine"] = "start_position amplitude "
+        "# track one cycle of a sine wave",
+        for command_to_ignore in ("abort", "setValue"):
+            del self.command_dict[command_to_ignore]
 
     async def close(self):
         self.tracking_task.cancel()
         await super().close()
-
-    async def do_configureAcceleration(self, args):
-        kwargs = self.check_arguments(args, "alimit")
-        await self.remote.cmd_configureAcceleration.set_start(
-            **kwargs, timeout=STD_TIMEOUT
-        )
-
-    async def do_configureVelocity(self, args):
-        kwargs = self.check_arguments(args, "vlimit")
-        await self.remote.cmd_configureVelocity.set_start(**kwargs, timeout=STD_TIMEOUT)
-
-    async def do_move(self, args):
-        kwargs = self.check_arguments(args, "position")
-        await self.remote.cmd_move.set_start(**kwargs, timeout=STD_TIMEOUT)
-
-    async def do_stop(self, args):
-        # For safety don't check arguments, just *stop*
-        self.tracking_task.cancel()
-        await self.remote.cmd_stop.start(timeout=STD_TIMEOUT)
-
-    async def do_trackStart(self, args):
-        self.check_arguments(args)
-        await self.remote.cmd_trackStart.start(timeout=STD_TIMEOUT)
 
     async def do_ramp(self, args):
         """Track from start_position to end_position at the specified velocity.

@@ -85,6 +85,9 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
         initial_state=Rotator.ControllerState.OFFLINE,
     ):
         self.encoder_resolution = 200_000  # counts/deg; arbitrary
+        # Amplitude of jitter in measured position (deg),
+        # to simulate encoder jitter.
+        self.position_jitter = 0.000003
         config = structs.Config()
         config.velocity_limit = 3  # deg/sec
         config.accel_limit = 1  # deg/sec^2
@@ -239,11 +242,13 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
 
     async def update_telemetry(self):
         try:
-            # Add ~0.01 arcsec jitter to the current position, for realism
-            # and to exercise commmand_rotator filtering of jitter.
+            # Add jitter to the current position, for realism
+            # and to exercise RotatorCommander filtering of jitter.
             curr_tai = salobj.current_tai()
             curr_segment = self.rotator.path.at(curr_tai)
-            curr_pos = curr_segment.position + 0.000003 * random.random()
+            curr_pos = curr_segment.position + self.position_jitter * (
+                random.random() - 0.5
+            )
             curr_pos_counts = self.encoder_resolution * curr_pos
             cmd_pos = self.rotator.target.at(curr_tai).position
             in_position = False

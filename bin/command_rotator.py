@@ -15,6 +15,4 @@ import asyncio
 
 from lsst.ts import rotator
 
-
-commander = rotator.RotatorCommander()
-asyncio.get_event_loop().run_until_complete(commander.amain())
+asyncio.run(rotator.RotatorCommander.amain(index=None))
