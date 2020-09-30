@@ -13,3 +13,7 @@ _g.update(
         project_name="ts_rotator", version=lsst.ts.rotator.__version__
     )
 )
+
+intersphinx_mapping["ts_xml"] = ("https://ts-xml.lsst.io", None)  # noqa
+intersphinx_mapping["ts_salobj"] = ("https://ts-salobj.lsst.io", None)  # noqa
+intersphinx_mapping["ts_hexrotcomm"] = ("https://ts-hexrotcomm.lsst.io", None)  # noqa
