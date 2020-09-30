@@ -6,10 +6,26 @@
 Version History
 ###############
 
+v0.7.1
+======
+
+Changes:
+
+* Modernize the documentation.
+
+Requires:
+
+* ts_hexrotcomm 0.7
+* ts_salobj 5.11 or 6
+* ts_simactuators 1
+* ts_idl 1.4, or 2 with salobj 6
+* ts_xml 6.2
+* Rotator IDL files, e.g. made using ``make_idl_files.py Rotator``
+
 v0.7.0
 ======
 
-Changes
+Changes:
 
 * Updated to read telemetry from a newer version of the low-level controller: changes added in https://jira.lsstcorp.org/browse/DM-25994.
 * Updated to write new event and telemetry information added in ts_xml 6.2.
@@ -30,7 +46,7 @@ Requires:
 v0.6.0
 ======
 
-Changes
+Changes:
 
 * Added missing ``config_dir`` constructor argument to `RotatorCsc`.
 * Use `lsst.ts.salobj.BaseCscTestCase` and `lsst.ts.salobj.CscCommander` instead of the versions in ts_hexrotcomm.
@@ -49,7 +65,7 @@ Requires:
 v0.5.0
 ======
 
-Changes
+Changes:
 
 * Make `RotatorCsc` configurable.
 
