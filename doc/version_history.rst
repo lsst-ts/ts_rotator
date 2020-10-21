@@ -6,22 +6,6 @@
 Version History
 ###############
 
-v0.7.1
-======
-
-Changes:
-
-* Modernize the documentation.
-
-Requires:
-
-* ts_hexrotcomm 0.7
-* ts_salobj 5.11 or 6
-* ts_simactuators 1
-* ts_idl 1.4, or 2 with salobj 6
-* ts_xml 6.2
-* Rotator IDL files, e.g. made using ``make_idl_files.py Rotator``
-
 v0.7.0
 ======
 
@@ -33,13 +17,14 @@ Changes:
   This requires ts_idl 1.4 or later.
 * Updated the git pre-commit hook to prevent the commit if black formatting needed.
   This encourages the user to properly commit the necessary reformatting.
+* Modernize the documentation.
 
 Requires:
 
 * ts_hexrotcomm 0.7
-* ts_salobj 5.11
+* ts_salobj 5.11 or 6
 * ts_simactuators 1
-* ts_idl 1.4
+* ts_idl 1.4, or 2 with salobj 6
 * ts_xml 6.2
 * Rotator IDL files, e.g. made using ``make_idl_files.py Rotator``
 
