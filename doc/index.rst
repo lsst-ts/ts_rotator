@@ -6,58 +6,91 @@
 lsst.ts.rotator
 ###############
 
-Python Commandable SAL Component (CSC) for the LSST main telescope rotator.
-This code is a front end for a low level controller written by Moog.
+.. image:: https://img.shields.io/badge/Project Metadata-gray.svg
+    :target: https://ts-xml.lsst.io/index.html#index-master-csc-table-rotator
+.. image:: https://img.shields.io/badge/SAL\ Interface-gray.svg
+    :target: https://ts-xml.lsst.io/sal_interfaces/Rotator.html
+.. image:: https://img.shields.io/badge/GitHub-gray.svg
+    :target: https://github.com/lsst-ts/ts_rotator
+.. image:: https://img.shields.io/badge/Jira-gray.svg
+    :target: https://jira.lsstcorp.org/issues/?jql=labels+%3D+ts_rotator
 
-How to start the system:
+Overview
+========
 
-* Turn on the rotator PXI if it is not already running.
-* Start the rotator CSC.
+The Rotator CSC controls the camera rotator on the Simonyi Survey Telescope.
+
+User Guide
+==========
+
+Start the Rotator CSC as follows:
+
+.. prompt:: bash
+
+    run_rotator.py
+
+Then check that the CSC has control of the low-level controller, as follows:
+
 * Wait for the ``connected`` event to report ``command=True`` and ``telemetry=True``.
-  This should happen quickly; if it does not then check that the PXI is fully booted up and configured to use the correct IP address for the CSC.
+  This should happen quickly; if it does not then check that the low-level controller is fully booted up and configured to use the correct IP address for the CSC.
 * Check the ``controllerState`` event.
-  If it is ``state=Offline, offline_substate=PublishOnly``, which is the state the PXI wakes up in, you must use the vendor's engineering user interface (EUI) to change the state to ``state=Offline, offline_substate=Available`` (or any more enabled mode).
-  You can set the state on the main panel.
+  If it is ``state=Offline, offline_substate=PublishOnly``, which is the state the low-level controller wakes up in,
+  then you must :ref:`use the EUI <lsst.ts.rotator.eui>` to change the state.
 * Check the ``commandableByDDS`` event.
-  If ``state=False`` then you must use the EUI to change the control mode from ``GUI`` to ``DDS``.
-  Use the ``Parameters`` panel to change the control mode (though the EUI _shows_ the control mode on the main panel).
+  If ``state=False`` then you must :ref:`use the EUI <lsst.ts.rotator.eui>` to change the control mode.
 
-Other notes:
+Notes
+-----
 
-* Recovery from the ``FAULT`` state is not standard: to leave the FAULT state send you may send the ``clearError`` command to transition ``state=Offline, offline_substate=PublishOnly``, or use the EUI to recover. Either way you will have to use the EUI to transition to ``state=Offline, offline_substate=Available`` to enable CSC has control.
+* To recover from the ``FAULT`` state (after fixing whatever is wrong) issue the ``clearError`` command.
+  This will transition to the ``STANDBY`` state.
 
-* The low level controller maintains the CSC summary state.
-  The CSC reports a summary state of OFFLINE until it receives telemetry from the low level controller.
-  Thus the CSC may unexpectedly transition from OFFLINE to a different state as it starts up.
+* The low-level controller maintains the CSC summary state,
+  so the CSC reports a summary state of ``OFFLINE`` until it receives telemetry from the low-level controller.
+  Thus the CSC may transition from ``OFFLINE`` to almost any other state as it starts up.
 
-* Communication between the low level controller and CSC is quite unusual:
+* Communication between the low-level controller and CSC is quite unusual:
 
-  * The low level controller connects to a TCP/IP _server_ in the CSC.
+  * The low-level controller connects to a TCP/IP *server* in the CSC.
+    Thus the low-level controller must be configured with the TCP/IP address of the CSC.
+  * The low-level controller does not acknowledge commands in any way.
+    Thus the CSC must try to predict whether the low-level controller can execute a command and reject the command if not.
+    Unfortunately this prediction cannot be completely accurate.
   * The connection uses two separate sockets, one for commands and the other for telemetry and configuration.
-  * The low level controller does not acknowledge commands in any way
-    (it only reads from the command socket, it does not write anything to it).
-    If the CSC predicts that the low level controller will reject (ignore) a command, it will fail the command (instead of sending it to the controller).
-    But this prediction cannot be completely accurate.
+    Both are one-directional: the low-level controller reads commands on the command socket and writes configuration and telemetry to the telemetry socket.
 
-.. .. toctree::
-..    :maxdepth: 1
+Simulator
+---------
 
-.. _lsst.ts.rotator-contributing:
+The CSC includes a simulation mode. To run using CSC's internal simulator:
 
-Contributing
-============
+.. prompt:: bash
 
-``lsst.ts.rotator`` is developed at https://github.com/lsst-ts/ts_rotator.
-You can find Jira issues for this module at `labels=ts_rotator <https://jira.lsstcorp.org/issues/?jql=project%20%3D%20DM%20AND%20labels%20%20%3D%20ts_rotator>`_.
+    run_rotator.py --simulate
 
-.. _lsst.ts.rotator-pyapi:
+.. _lsst.ts.rotator.eui:
 
-Python API reference
-====================
+The Engineering User Interface (EUI)
+------------------------------------
 
-.. automodapi:: lsst.ts.rotator
-   :no-main-docstr:
-   :no-inheritance-diagram:
+Use the Engineering User Interface (EUI) as follows to enable CSC control of the low-level controller:
+
+    * State must be ``state=Offline, offline_substate=Available`` or any more enabled state.
+      The low-level controller wakes up in ``state=Offline, offline_substate=PublishOnly``,
+      and you must change this before the CSC can control the low-level controller.
+      Change the state on the main panel of the EUI.
+    * Control mode must be ``DDS``.
+      The low-level controller wakes up in control mode ``GUI``,
+      and you must change this before the CSC can control the low-level controller.
+      To change the control mode use the ``Parameters`` panel;
+      note that the EUI *shows* the control mode on the main panel, but that display is read-only.
+
+Developer Guide
+===============
+
+.. toctree::
+    developer_guide
+    :maxdepth: 1
 
 Version History
 ===============

@@ -113,6 +113,84 @@ class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
                             vlimit=bad_vlimit, timeout=STD_TIMEOUT
                         )
 
+    async def assert_rotation(
+        self,
+        demand_position=None,
+        demand_velocity=None,
+        demand_acceleration=None,
+        actual_position=None,
+        actual_velocity=None,
+        tai_time=None,
+    ):
+        """Check the next rotation and Application telemetry messages.
+
+        Parameters
+        ----------
+        demand_position : `float` or `None`
+            Predicted value of demand position. Ignore if `None`.
+        demand_velocity : `float` or `None`
+            Predicted value of demand velocity. Ignore if `None`.
+        demand_acceleration : `float` or `None`
+            Predicted value of demand acceleration. Ignore if `None`.
+        actual_position : `float` or `None`
+            Predicted value of actual position. Ignore if `None`.
+        actual_velocity : `float` or `None`
+            Predicted value of actual velocity. Ignore if `None`.
+        tai_time : `float` or `None`
+            TAI time at which you computed demand and actual position.
+            If not `None` then  adjust demand_position and actual_position for
+            the reported demand velocity, demand acceleration and timestamp.
+        """
+        application_data = await self.remote.tel_Application.next(
+            flush=True, timeout=STD_TIMEOUT
+        )
+        rotation_data = await self.remote.tel_rotation.next(
+            flush=True, timeout=STD_TIMEOUT
+        )
+        if tai_time is None:
+            delta_tai = 0
+        else:
+            delta_tai = rotation_data.timestamp - tai_time
+
+        if demand_velocity is not None:
+            self.assertAlmostEqual(rotation_data.demandVelocity, demand_velocity)
+        if demand_acceleration is not None:
+            self.assertAlmostEqual(
+                rotation_data.demandAcceleration, demand_acceleration
+            )
+        if demand_position is not None:
+            adjusted_demand_position = (
+                demand_position
+                + rotation_data.demandVelocity * delta_tai
+                + 0.5 * rotation_data.demandAcceleration * delta_tai ** 2
+            )
+            self.assertAlmostEqual(application_data.Demand, adjusted_demand_position)
+            self.assertAlmostEqual(
+                rotation_data.demandPosition, adjusted_demand_position
+            )
+        if actual_velocity is not None:
+            self.assertAlmostEqual(
+                rotation_data.actualVelocity,
+                actual_velocity,
+                delta=self.csc.mock_ctrl.position_jitter,
+            )
+        if actual_position is not None:
+            adjusted_actual_position = (
+                actual_position
+                + rotation_data.demandVelocity * delta_tai
+                + 0.5 * rotation_data.demandAcceleration * delta_tai ** 2
+            )
+            self.assertAlmostEqual(
+                application_data.Position,
+                adjusted_actual_position,
+                delta=self.csc.mock_ctrl.position_jitter,
+            )
+            self.assertAlmostEqual(
+                rotation_data.actualPosition,
+                adjusted_actual_position,
+                delta=self.csc.mock_ctrl.position_jitter,
+            )
+
     async def test_move(self):
         """Test the move command for point to point motion.
         """
@@ -126,12 +204,12 @@ class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
                 controllerState=Rotator.ControllerState.ENABLED,
                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY,
             )
-            data = await self.remote.tel_Application.next(
-                flush=True, timeout=STD_TIMEOUT
-            )
-            self.assertAlmostEqual(data.Demand, 0)
-            self.assertAlmostEqual(
-                data.Position, 0, delta=self.csc.mock_ctrl.position_jitter
+            await self.assert_rotation(
+                demand_position=0,
+                demand_velocity=0,
+                demand_acceleration=0,
+                actual_position=0,
+                actual_velocity=0,
             )
             data = await self.remote.evt_inPosition.next(
                 flush=False, timeout=STD_TIMEOUT
@@ -168,9 +246,12 @@ class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
                 data = await self.remote.tel_Application.next(
                     flush=True, timeout=STD_TIMEOUT
                 )
-            self.assertAlmostEqual(data.Demand, destination)
-            self.assertAlmostEqual(
-                data.Position, destination, delta=self.csc.mock_ctrl.position_jitter
+            await self.assert_rotation(
+                demand_position=destination,
+                demand_velocity=0,
+                demand_acceleration=0,
+                actual_position=destination,
+                actual_velocity=0,
             )
 
     async def test_stop_move(self):
@@ -396,7 +477,7 @@ class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
             )
 
     async def test_track_start_late_track(self):
-        """Test the trackStart command with a late track command.
+        """Test tracking with a late track command.
 
         Also test that we can send the track command immediately after
         the trackStart command. before the controller has time to tell
@@ -413,6 +494,9 @@ class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
                 topic=self.remote.evt_controllerState,
                 controllerState=Rotator.ControllerState.ENABLED,
                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY,
+            )
+            await self.assert_next_sample(
+                topic=self.remote.evt_tracking, noNewCommand=False
             )
             data = await self.remote.tel_Application.next(
                 flush=True, timeout=STD_TIMEOUT
@@ -448,6 +532,9 @@ class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
             await self.assert_next_sample(
                 topic=self.remote.evt_controllerState,
                 controllerState=Rotator.ControllerState.FAULT,
+            )
+            await self.assert_next_sample(
+                topic=self.remote.evt_tracking, noNewCommand=True
             )
 
 
