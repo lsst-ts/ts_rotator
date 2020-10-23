@@ -6,6 +6,23 @@
 Version History
 ###############
 
+v0.7.1
+======
+
+Changes:
+
+* Fix conda build.
+
+Requires:
+
+* ts_hexrotcomm 0.7
+* ts_salobj 5.11 or 6
+* ts_simactuators 1
+* ts_idl 1.4, or 2 with salobj 6
+* ts_xml 6.2
+* Rotator IDL files, e.g. made using ``make_idl_files.py Rotator``
+
+
 v0.7.0
 ======
 
