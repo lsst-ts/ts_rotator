@@ -2,7 +2,6 @@ pipeline {
     agent any
     environment {
         package_name = "rotator"
-        package_version = sh(returnStdout: true, script: "git describe --tags --always --dirty").trim()
         dockerImageName = "lsstts/conda_package_builder:latest"
         container_name = "salobj_${BUILD_ID}_${JENKINS_NODE_COOKIE}"
     }
@@ -33,11 +32,12 @@ pipeline {
             steps {
                 script {
                     sh """
-                    docker exec ${container_name} sh -c "git clone https://github.com/lsst-ts/ts_config_attcs.git"
+                    docker exec ${container_name} sh -c "git clone https://github.com/lsst-ts/ts_config_mttcs.git"
                     """
                 }
             }
-        }        stage("Create Rotator Conda package") {
+        }
+        stage("Create Rotator Conda package") {
             steps {
                 script {
                     sh """
