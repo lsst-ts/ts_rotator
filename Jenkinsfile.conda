@@ -22,14 +22,22 @@ pipeline {
                 script {
                     sh """
                     docker run --name ${container_name} -di --rm \
-                        --env TS_CONFIG_ATTCS_DIR=/home/saluser/ts_config_attcs \
+                        --env TS_CONFIG_MTTCS_DIR=/home/saluser/ts_config_mttcs \
                         --env LSST_DDS_DOMAIN=citest \
                         -v ${WORKSPACE}:/home/saluser/source ${dockerImageName}
                     """
                 }
             }
         }
-        stage("Create Rotator Conda package") {
+        stage("Clone ts_config_mttcs"){
+            steps {
+                script {
+                    sh """
+                    docker exec ${container_name} sh -c "git clone https://github.com/lsst-ts/ts_config_attcs.git"
+                    """
+                }
+            }
+        }        stage("Create Rotator Conda package") {
             steps {
                 script {
                     sh """
