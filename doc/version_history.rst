@@ -6,6 +6,22 @@
 Version History
 ###############
 
+v0.7.3
+======
+
+Changes:
+
+* Use the time in the telemetry header to set the ``rotation`` telemetry topic's time stamp.
+
+Requires:
+
+* ts_hexrotcomm 0.7
+* ts_salobj 5.11 or 6
+* ts_simactuators 1
+* ts_idl 1.4, or 2 with salobj 6
+* ts_xml 6.2
+* Rotator IDL files, e.g. made using ``make_idl_files.py Rotator``
+
 v0.7.2
 ======
 
