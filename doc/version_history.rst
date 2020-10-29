@@ -6,6 +6,26 @@
 Version History
 ###############
 
+v0.8.0
+======
+
+Changes:
+
+* Updated to use and require ts_salobj 6.1 and ts_hexrotcomm 0.10.
+* Update the handling of initial_state in `RotatorCsc`:
+
+    * If initial_state != OFFLINE then report all transitional summary states and controller states at startup.
+    * Require initial_state = OFFLINE unless simulating.
+
+Requires:
+
+* ts_hexrotcomm 0.7
+* ts_salobj 6.1
+* ts_simactuators 1
+* ts_idl 2
+* ts_xml 6.2
+* Rotator IDL files, e.g. made using ``make_idl_files.py Rotator``
+
 v0.7.3
 ======
 
@@ -16,11 +36,12 @@ Changes:
 Requires:
 
 * ts_hexrotcomm 0.7
-* ts_salobj 5.11 or 6
+* ts_salobj 5.11 or 6.0
 * ts_simactuators 1
-* ts_idl 1.4, or 2 with salobj 6
+* ts_idl 1.4, or 2 with salobj 6.0
 * ts_xml 6.2
 * Rotator IDL files, e.g. made using ``make_idl_files.py Rotator``
+
 
 v0.7.2
 ======
@@ -32,9 +53,9 @@ Changes:
 Requires:
 
 * ts_hexrotcomm 0.7
-* ts_salobj 5.11 or 6
+* ts_salobj 5.11 or 6.0
 * ts_simactuators 1
-* ts_idl 1.4, or 2 with salobj 6
+* ts_idl 1.4 with salobj 5, or 2 with salobj 6
 * ts_xml 6.2
 * Rotator IDL files, e.g. made using ``make_idl_files.py Rotator``
 
