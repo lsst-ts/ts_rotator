@@ -24,6 +24,8 @@ __all__ = ["RotatorCsc"]
 import argparse
 import pathlib
 
+import astropy.time
+
 from lsst.ts import salobj
 from lsst.ts import hexrotcomm
 from lsst.ts.idl.enums import Rotator
@@ -244,11 +246,10 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         server : `lsst.ts.hexrotcomm.CommandTelemetryServer`
             TCP/IP server.
         """
-        # TODO DM-26384: use the new timestamp in the telemetry from
-        # the low-level controller, instead of this time.
-        # Also consider computing actual velocity using delta position
-        # and that (presumably accurate) timestamp.
-        curr_tai = salobj.current_tai()
+        tel_time = astropy.time.Time(
+            server.header.mjd, server.header.mjd_frac, format="mjd", scale="utc"
+        )
+        tel_tai_unix = salobj.tai_from_utc(tel_time)
         if self._tracking_started_telemetry_counter > 0:
             self._tracking_started_telemetry_counter -= 1
         self.evt_summaryState.set_put(summaryState=self.summary_state)
@@ -279,7 +280,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
             / 2,
             debugActualVelocityA=server.telemetry.current_vel_ch_a_fb,
             debugActualVelocityB=server.telemetry.current_vel_ch_a_fb,
-            timestamp=curr_tai,
+            timestamp=tel_tai_unix,
         )
         self.tel_electrical.set_put(
             copleyStatusWordDrive=[
