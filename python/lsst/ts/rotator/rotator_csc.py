@@ -316,9 +316,9 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         )
 
         self.evt_tracking.set_put(
-            tracking=server.telemetry.flags_tracking_success,
-            lost=server.telemetry.flags_tracking_lost,
-            noNewCommand=server.telemetry.flags_no_new_track_cmd_error,
+            tracking=bool(server.telemetry.flags_tracking_success),
+            lost=bool(server.telemetry.flags_tracking_lost),
+            noNewCommand=bool(server.telemetry.flags_no_new_track_cmd_error),
         )
 
         safety_interlock = (
