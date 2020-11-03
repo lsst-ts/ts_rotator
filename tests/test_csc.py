@@ -25,6 +25,7 @@ import time
 
 import asynctest
 
+from lsst.ts import hexrotcomm
 from lsst.ts import salobj
 from lsst.ts import rotator
 from lsst.ts.idl.enums import Rotator
@@ -32,7 +33,7 @@ from lsst.ts.idl.enums import Rotator
 STD_TIMEOUT = 30  # timeout for command ack
 
 
-class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
+class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
     def basic_make_csc(self, initial_state, simulation_mode=1, config_dir=None):
         return rotator.RotatorCsc(
             initial_state=initial_state,
@@ -48,7 +49,6 @@ class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
             index=None,
             exe_name="run_rotator.py",
             cmdline_args=["--simulate"],
-            initial_state=salobj.State.OFFLINE,
         )
 
     async def test_standard_state_transitions(self):
@@ -496,7 +496,7 @@ class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY,
             )
             await self.assert_next_sample(
-                topic=self.remote.evt_tracking, noNewCommand=False
+                topic=self.remote.evt_tracking, tracking=False, noNewCommand=False
             )
             data = await self.remote.tel_Application.next(
                 flush=True, timeout=STD_TIMEOUT
@@ -523,6 +523,10 @@ class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
                 controllerState=Rotator.ControllerState.ENABLED,
                 enabledSubstate=Rotator.EnabledSubstate.SLEWING_OR_TRACKING,
             )
+            await self.assert_next_sample(
+                topic=self.remote.evt_tracking, tracking=True, noNewCommand=False
+            )
+
             # Wait for the lack of track commands to send the CSC into FAULT;
             # wait a bit longer than usual to allow the tracking timer
             # to expire.
@@ -534,7 +538,7 @@ class TestRotatorCsc(salobj.BaseCscTestCase, asynctest.TestCase):
                 controllerState=Rotator.ControllerState.FAULT,
             )
             await self.assert_next_sample(
-                topic=self.remote.evt_tracking, noNewCommand=True
+                topic=self.remote.evt_tracking, tracking=False, noNewCommand=True
             )
 
 
