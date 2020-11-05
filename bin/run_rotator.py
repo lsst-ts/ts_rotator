@@ -25,4 +25,4 @@ import asyncio
 
 from lsst.ts.rotator import RotatorCsc
 
-asyncio.run(RotatorCsc.amain())
+asyncio.run(RotatorCsc.amain(index=None))
