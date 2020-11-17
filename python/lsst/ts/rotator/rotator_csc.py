@@ -21,7 +21,6 @@
 
 __all__ = ["RotatorCsc"]
 
-import argparse
 import pathlib
 
 import astropy.time
@@ -45,15 +44,20 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         configuration directory (obtained from `_get_default_config_dir`).
         This is provided for unit testing.
     initial_state : `lsst.ts.salobj.State` or `int` (optional)
-        The initial state of the CSC. Ignored (other than checking
-        that it is a valid value) except in simulation mode,
-        because in normal operation the initial state is the current state
-        of the controller. This is provided for unit testing.
+        The initial state of the CSC.
+        Must be `lsst.ts.salobj.State.OFFLINE` unless simulating
+        (``simulation_mode != 0``).
     simulation_mode : `int` (optional)
         Simulation mode. Allowed values:
 
         * 0: regular operation.
         * 1: simulation: use a mock low level controller.
+
+    Raises
+    ------
+    ValueError
+        If ``initial_state != lsst.ts.salobj.State.OFFLINE``
+        and not simulating (``simulation_mode = 0``).
 
     Notes
     -----
@@ -69,6 +73,8 @@ class RotatorCsc(hexrotcomm.BaseCsc):
       (that's why this code inherits from Controller instead of BaseCsc).
     * The simulation mode can only be set at construction time.
     """
+
+    valid_simulation_modes = [0, 1]
 
     def __init__(
         self, config_dir=None, initial_state=salobj.State.OFFLINE, simulation_mode=0
@@ -101,8 +107,8 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         )
 
     async def start(self):
-        await super().start()
         self.evt_inPosition.set_put(inPosition=False, force_output=True)
+        await super().start()
 
     async def configure(self, config):
         pass
@@ -304,8 +310,10 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         )
 
         self.evt_inPosition.set_put(
-            inPosition=server.telemetry.flags_pt2pt_move_complete
-            or server.telemetry.flags_slew_complete,
+            inPosition=bool(
+                server.telemetry.flags_pt2pt_move_complete
+                or server.telemetry.flags_slew_complete
+            )
         )
 
         self.evt_commandableByDDS.set_put(
@@ -316,9 +324,9 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         )
 
         self.evt_tracking.set_put(
-            tracking=server.telemetry.flags_tracking_success,
-            lost=server.telemetry.flags_tracking_lost,
-            noNewCommand=server.telemetry.flags_no_new_track_cmd_error,
+            tracking=bool(server.telemetry.flags_tracking_success),
+            lost=bool(server.telemetry.flags_tracking_lost),
+            noNewCommand=bool(server.telemetry.flags_no_new_track_cmd_error),
         )
 
         safety_interlock = (
@@ -337,16 +345,3 @@ class RotatorCsc(hexrotcomm.BaseCsc):
             command_port=self.server.command_port,
             telemetry_port=self.server.telemetry_port,
         )
-
-    @classmethod
-    async def amain(cls):
-        """Make a CSC from command-line arguments and run it.
-        """
-        parser = argparse.ArgumentParser(f"Run {cls.__name__}")
-        parser.add_argument(
-            "-s", "--simulate", action="store_true", help="Run in simulation mode?"
-        )
-
-        args = parser.parse_args()
-        csc = cls(simulation_mode=int(args.simulate))
-        await csc.done_task
