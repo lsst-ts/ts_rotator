@@ -28,7 +28,7 @@ This is a pure python package. There is nothing to build except the documentatio
 
 .. code-block:: bash
 
-    make_idl_files.py ATDome
+    make_idl_files.py MTRotator
     setup -r .
     pytest -v  # to run tests
     package-docs clean; package-docs build  # to build the documentation
@@ -36,5 +36,5 @@ This is a pure python package. There is nothing to build except the documentatio
 Contributing
 ============
 
-``lsst.ts.mtrotator`` is developed at https://github.com/lsst-ts/ts_mtrotator.
-You can find Jira issues for this module using `labels=ts_mtrotator <https://jira.lsstcorp.org/issues/?jql=project%20%3D%20DM%20AND%20labels%20%20%3D%20ts_mtrotator>`_..
+``ts_mtrotator`` is developed at https://github.com/lsst-ts/ts_mtrotator.
+You can find Jira issues for this package using `labels=ts_mtrotator <https://jira.lsstcorp.org/issues/?jql=project%20%3D%20DM%20AND%20labels%20%20%3D%20ts_mtrotator>`_..
