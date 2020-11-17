@@ -6,6 +6,27 @@
 Version History
 ###############
 
+v0.9.0
+======
+
+Changes:
+
+* Updated to use and require ts_salobj 7.0, ts_idl 2.2, and ts_hexrotcomm 0.11:
+
+    * Rename the SAL component ``Rotator`` to ``MTRotator``.
+    * Rename ts_idl ``Rotator`` enum module to ``MTRotator``.
+
+* Rename the package from ``ts_rotator`` to ``ts_mtrotator``.
+
+Requires:
+
+* ts_hexrotcomm 0.11
+* ts_salobj 6.1
+* ts_simactuators 1
+* ts_idl 2.2
+* ts_xml 7
+* MTRotator IDL files, e.g. made using ``make_idl_files.py MTRotator``
+
 v0.8.0
 ======
 
