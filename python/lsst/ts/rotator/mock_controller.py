@@ -27,7 +27,12 @@ import random
 from lsst.ts import salobj
 from lsst.ts import hexrotcomm
 from lsst.ts import simactuators
-from lsst.ts.idl.enums import Rotator
+from lsst.ts.idl.enums.MTRotator import (
+    ControllerState,
+    EnabledSubstate,
+    OfflineSubstate,
+    ApplicationStatus,
+)
 from . import constants
 from . import enums
 from . import structs
@@ -52,7 +57,7 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
     telemetry_port : `int` (optional)
         Telemetry socket port. This argument is intended for unit tests;
         use the default value for normal operation.
-    initial_state : `lsst.ts.idl.enums.Rotator.ControllerState` (optional)
+    initial_state : `lsst.ts.idl.enums.MTRotator.ControllerState` (optional)
         Initial state of mock controller.
 
     Notes
@@ -82,7 +87,7 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
         host=hexrotcomm.LOCAL_HOST,
         command_port=hexrotcomm.COMMAND_PORT,
         telemetry_port=hexrotcomm.TELEMETRY_PORT,
-        initial_state=Rotator.ControllerState.OFFLINE,
+        initial_state=ControllerState.OFFLINE,
     ):
         self.encoder_resolution = 200_000  # counts/deg; arbitrary
         # Amplitude of jitter in measured position (deg),
@@ -199,14 +204,14 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
 
     async def do_track(self, command):
         self.assert_stationary()
-        self.telemetry.enabled_substate = Rotator.EnabledSubstate.SLEWING_OR_TRACKING
+        self.telemetry.enabled_substate = EnabledSubstate.SLEWING_OR_TRACKING
         self.tracking_timer_task.cancel()
 
     async def do_stop(self, command):
-        self.assert_state(Rotator.ControllerState.ENABLED)
+        self.assert_state(ControllerState.ENABLED)
         self.rotator.stop()
         self.tracking_timer_task.cancel()
-        self.telemetry.enabled_substate = Rotator.EnabledSubstate.STATIONARY
+        self.telemetry.enabled_substate = EnabledSubstate.STATIONARY
 
     async def do_move_point_to_point(self, command):
         if not math.isfinite(self.telemetry.set_pos):
@@ -216,7 +221,7 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
         self.rotator.set_target(
             tai=salobj.current_tai(), position=self.telemetry.set_pos, velocity=0
         )
-        self.telemetry.enabled_substate = Rotator.EnabledSubstate.MOVING_POINT_TO_POINT
+        self.telemetry.enabled_substate = EnabledSubstate.MOVING_POINT_TO_POINT
         self.telemetry.flags_pt2pt_move_complete = 0
 
     async def do_set_constant_vel(self, command):
@@ -227,7 +232,7 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
         dt = salobj.current_tai() - tai
         curr_pos = pos + vel * dt
         if not self.config.lower_pos_limit <= curr_pos <= self.config.upper_pos_limit:
-            self.set_state(Rotator.ControllerState.FAULT)
+            self.set_state(ControllerState.FAULT)
             raise RuntimeError(
                 f"fault: commanded position {curr_pos} not in range "
                 f"[{self.config.lower_pos_limit}, {self.config.upper_pos_limit}]"
@@ -245,7 +250,7 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
         await asyncio.sleep(TRACK_TIMEOUT)
         self.log.error("Tracking timer expired; going to FAULT")
         self.tracking_timed_out = True
-        self.set_state(Rotator.ControllerState.FAULT)
+        self.set_state(ControllerState.FAULT)
 
     async def update_telemetry(self):
         try:
@@ -267,16 +272,14 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
             self.telemetry.latching_fault_status_register_axis_b = 0
             self.telemetry.input_pin_states = 0
             self.telemetry.copley_fault_status_register = (0, 0)
-            self.telemetry.application_status = (
-                Rotator.ApplicationStatus.DDS_COMMAND_SOURCE
-            )
+            self.telemetry.application_status = ApplicationStatus.DDS_COMMAND_SOURCE
             self.telemetry.commanded_pos = cmd_target.position
             self.telemetry.commanded_vel = cmd_target.velocity
             self.telemetry.commanded_accel = cmd_target.acceleration
             self.telemetry.current_pos = curr_pos
             self.telemetry.current_vel_ch_a_fb = curr_segment.velocity
             self.telemetry.current_vel_ch_b_fb = curr_segment.velocity
-            if self.telemetry.state == Rotator.ControllerState.ENABLED:
+            if self.telemetry.state == ControllerState.ENABLED:
                 # Use config parameter `track_success_pos_threshold` to
                 # compute `in_position`, instead of `self.rotator.path.kind`,
                 # so that tracking success varies with the config parameter.
@@ -285,13 +288,13 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
                     < self.config.track_success_pos_threshold
                 )
             else:
-                self.telemetry.enabled_substate = Rotator.EnabledSubstate.STATIONARY
-            if self.telemetry.state != Rotator.ControllerState.OFFLINE:
-                self.telemetry.offline_substate = Rotator.OfflineSubstate.AVAILABLE
+                self.telemetry.enabled_substate = EnabledSubstate.STATIONARY
+            if self.telemetry.state != ControllerState.OFFLINE:
+                self.telemetry.offline_substate = OfflineSubstate.AVAILABLE
             if (
-                self.telemetry.state == Rotator.ControllerState.ENABLED
+                self.telemetry.state == ControllerState.ENABLED
                 and self.telemetry.enabled_substate
-                == Rotator.EnabledSubstate.SLEWING_OR_TRACKING
+                == EnabledSubstate.SLEWING_OR_TRACKING
             ):
                 self.telemetry.flags_slew_complete = (
                     self.track_vel_cmd_seen and in_position
@@ -300,13 +303,13 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
                 self.telemetry.flags_slew_complete = 0
                 self.track_vel_cmd_seen = False
             if (
-                self.telemetry.state == Rotator.ControllerState.ENABLED
+                self.telemetry.state == ControllerState.ENABLED
                 and self.telemetry.enabled_substate
-                == Rotator.EnabledSubstate.MOVING_POINT_TO_POINT
+                == EnabledSubstate.MOVING_POINT_TO_POINT
                 and in_position
             ):
                 self.telemetry.flags_pt2pt_move_complete = 1
-                self.telemetry.enabled_substate = Rotator.EnabledSubstate.STATIONARY
+                self.telemetry.enabled_substate = EnabledSubstate.STATIONARY
             else:
                 self.telemetry.flags_pt2pt_move_complete = 0
             self.telemetry.flags_stop_complete = 1

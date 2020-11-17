@@ -27,7 +27,7 @@ import astropy.time
 
 from lsst.ts import salobj
 from lsst.ts import hexrotcomm
-from lsst.ts.idl.enums import Rotator
+from lsst.ts.idl.enums.MTRotator import EnabledSubstate, ApplicationStatus
 from . import constants
 from . import enums
 from . import structs
@@ -115,7 +115,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
 
     async def do_configureAcceleration(self, data):
         """Specify the acceleration limit."""
-        self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
+        self.assert_enabled_substate(EnabledSubstate.STATIONARY)
         if not 0 < data.alimit <= constants.MAX_ACCEL_LIMIT:
             raise salobj.ExpectedError(
                 f"alimit={data.alimit} must be > 0 and <= {constants.MAX_ACCEL_LIMIT}"
@@ -124,7 +124,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
 
     async def do_configureVelocity(self, data):
         """Specify the velocity limit."""
-        self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
+        self.assert_enabled_substate(EnabledSubstate.STATIONARY)
         if not 0 < data.vlimit <= constants.MAX_VEL_LIMIT:
             raise salobj.ExpectedError(
                 f"vlimit={data.vlimit} must be > 0 and <= {constants.MAX_VEL_LIMIT}"
@@ -135,7 +135,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         """Go to the position specified by the most recent ``positionSet``
         command.
         """
-        self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
+        self.assert_enabled_substate(EnabledSubstate.STATIONARY)
         if (
             not self.server.config.lower_pos_limit
             <= data.position
@@ -178,13 +178,13 @@ class RotatorCsc(hexrotcomm.BaseCsc):
             raise salobj.ExpectedError("Not enabled")
         if (
             self.server.telemetry.enabled_substate
-            != Rotator.EnabledSubstate.SLEWING_OR_TRACKING
+            != EnabledSubstate.SLEWING_OR_TRACKING
         ):
             if self._tracking_started_telemetry_counter <= 0:
                 raise salobj.ExpectedError(
                     "Low-level controller in substate "
                     f"{self.server.telemetry.enabled_substate} "
-                    f"instead of {Rotator.EnabledSubstate.SLEWING_OR_TRACKING}"
+                    f"instead of {EnabledSubstate.SLEWING_OR_TRACKING}"
                 )
         dt = data.tai - salobj.current_tai()
         curr_pos = data.angle + data.velocity * dt
@@ -219,7 +219,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         Once this is run you must issue ``track`` commands at 10-20Hz
         until you are done tracking, then issue the ``stop`` command.
         """
-        self.assert_enabled_substate(Rotator.EnabledSubstate.STATIONARY)
+        self.assert_enabled_substate(EnabledSubstate.STATIONARY)
         await self.run_command(
             code=enums.CommandCode.SET_ENABLED_SUBSTATE,
             param1=enums.SetEnabledSubstateParam.TRACK,
@@ -319,7 +319,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         self.evt_commandableByDDS.set_put(
             state=bool(
                 server.telemetry.application_status
-                & Rotator.ApplicationStatus.DDS_COMMAND_SOURCE
+                & ApplicationStatus.DDS_COMMAND_SOURCE
             ),
         )
 
@@ -330,8 +330,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         )
 
         safety_interlock = (
-            server.telemetry.application_status
-            & Rotator.ApplicationStatus.SAFETY_INTERLOCK
+            server.telemetry.application_status & ApplicationStatus.SAFETY_INTERLOCK
         )
         self.evt_interlock.set_put(
             detail="Engaged" if safety_interlock else "Disengaged",
