@@ -21,11 +21,10 @@ build:
 test:
   requires:
     - ts-conda-build
-    - ts-simactuators
-    - ts-dds
     - ts-idl
     - ts-salobj
     - ts-hexrotcomm
+    - ts-simactuators
   source_files:
     - python
     - bin
@@ -45,6 +44,7 @@ requirements:
     - python
     - setuptools
     - setuptools_scm
+    - ts-idl
     - ts-salobj
-    - ts-simactuators
     - ts-hexrotcomm
+    - ts-simactuators
