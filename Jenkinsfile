@@ -65,7 +65,7 @@ pipeline {
             steps {
                 script {
                     sh """
-                    docker exec -u saluser \${container_name} sh -c \"source ~/.setup.sh && setup ts_sal -t current && make_idl_files.py Rotator\"
+                    docker exec -u saluser \${container_name} sh -c \"source ~/.setup.sh && setup ts_sal -t current && make_idl_files.py MTRotator\"
                     """
                 }
             }
@@ -101,7 +101,7 @@ pipeline {
             steps {
                 script {
                     sh """
-                    docker exec -u saluser \${container_name} sh -c \"source ~/.setup.sh && cd repo && eups declare -r . -t saluser && setup ts_rotator -t saluser && export LSST_DDS_IP=192.168.0.1 && pytest --color=no -ra --junitxml=tests/results/results.xml\"
+                    docker exec -u saluser \${container_name} sh -c \"source ~/.setup.sh && cd repo && eups declare -r . -t saluser && setup ts_mtrotator -t saluser && export LSST_DDS_IP=192.168.0.1 && pytest --color=no -ra --junitxml=tests/results/results.xml\"
                     """
                 }
             }
@@ -124,13 +124,13 @@ pipeline {
               ])
 
             sh """
-            docker exec -u saluser \${container_name} sh -c \"source ~/.setup.sh && cd /home/saluser/repo/ && setup ts_rotator -t saluser && package-docs build\"
+            docker exec -u saluser \${container_name} sh -c \"source ~/.setup.sh && cd /home/saluser/repo/ && setup ts_mtrotator -t saluser && package-docs build\"
             """
 
             script {
 
                 def RESULT = sh returnStatus: true, script: """
-                docker exec -u saluser \${container_name} sh -c \"source ~/.setup.sh && cd /home/saluser/repo/ && setup ts_rotator -t saluser && ltd upload --product ts-rotator --git-ref \${GIT_BRANCH} --dir doc/_build/html\"
+                docker exec -u saluser \${container_name} sh -c \"source ~/.setup.sh && cd /home/saluser/repo/ && setup ts_mtrotator -t saluser && ltd upload --product ts-mtrotator --git-ref \${GIT_BRANCH} --dir doc/_build/html\"
                 """
 
                 if ( RESULT != 0 ) {

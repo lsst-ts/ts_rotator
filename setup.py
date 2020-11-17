@@ -10,10 +10,10 @@ __version__ = "{version}"
 """
 
 setup(
-    name="ts_rotator",
+    name="ts_mtrotator",
     description="CSC for main telescope camera rotator",
     use_scm_version={
-        "write_to": "python/lsst/ts/rotator/version.py",
+        "write_to": "python/lsst/ts/mtrotator/version.py",
         "write_to_template": scm_version_template,
     },
     setup_requires=["setuptools_scm", "pytest-runner"],
@@ -22,15 +22,15 @@ setup(
     packages=find_namespace_packages(where="python"),
     package_data={"": ["*.rst", "*.yaml"]},
     scripts=[
-        "bin/run_rotator.py",
-        "bin/run_mock_rotator_pxi.py",
-        "bin/command_rotator.py",
+        "bin/run_mtrotator.py",
+        "bin/run_mock_mtrotator_pxi.py",
+        "bin/command_mtrotator.py",
     ],
     tests_require=tests_require,
     extras_require={"dev": dev_requires},
     license="GPL",
     project_urls={
         "Bug Tracker": "https://jira.lsstcorp.org/secure/Dashboard.jspa",
-        "Source Code": "https://github.com/lsst-ts/ts_rotator",
+        "Source Code": "https://github.com/lsst-ts/ts_mtrotator",
     },
 )
