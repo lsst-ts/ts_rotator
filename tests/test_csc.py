@@ -45,7 +45,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         """Test running from the command line script.
         """
         await self.check_bin_script(
-            name="Rotator",
+            name="MTRotator",
             index=None,
             exe_name="run_rotator.py",
             cmdline_args=["--simulate"],
@@ -141,7 +141,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
             If not `None` then  adjust demand_position and actual_position for
             the reported demand velocity, demand acceleration and timestamp.
         """
-        application_data = await self.remote.tel_Application.next(
+        application_data = await self.remote.tel_application.next(
             flush=True, timeout=STD_TIMEOUT
         )
         rotation_data = await self.remote.tel_rotation.next(
@@ -164,7 +164,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
                 + rotation_data.demandVelocity * delta_tai
                 + 0.5 * rotation_data.demandAcceleration * delta_tai ** 2
             )
-            self.assertAlmostEqual(application_data.Demand, adjusted_demand_position)
+            self.assertAlmostEqual(application_data.demand, adjusted_demand_position)
             self.assertAlmostEqual(
                 rotation_data.demandPosition, adjusted_demand_position
             )
@@ -181,7 +181,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
                 + 0.5 * rotation_data.demandAcceleration * delta_tai ** 2
             )
             self.assertAlmostEqual(
-                application_data.Position,
+                application_data.position,
                 adjusted_actual_position,
                 delta=self.csc.mock_ctrl.position_jitter,
             )
@@ -243,7 +243,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
             # Read a few telemetry samples to allow the
             # slew to truly finish.
             for i in range(3):
-                data = await self.remote.tel_Application.next(
+                data = await self.remote.tel_application.next(
                     flush=True, timeout=STD_TIMEOUT
                 )
             await self.assert_rotation(
@@ -265,12 +265,12 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
                 controllerState=Rotator.ControllerState.ENABLED,
                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY,
             )
-            data = await self.remote.tel_Application.next(
+            data = await self.remote.tel_application.next(
                 flush=True, timeout=STD_TIMEOUT
             )
-            self.assertAlmostEqual(data.Demand, 0)
+            self.assertAlmostEqual(data.demand, 0)
             self.assertAlmostEqual(
-                data.Position, 0, delta=self.csc.mock_ctrl.position_jitter
+                data.position, 0, delta=self.csc.mock_ctrl.position_jitter
             )
             data = await self.remote.evt_inPosition.next(
                 flush=False, timeout=STD_TIMEOUT
@@ -293,11 +293,11 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
                 controllerState=Rotator.ControllerState.ENABLED,
                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY,
             )
-            data = await self.remote.tel_Application.next(
+            data = await self.remote.tel_application.next(
                 flush=True, timeout=STD_TIMEOUT
             )
-            self.assertGreater(data.Position, 0)
-            self.assertLess(data.Position, destination)
+            self.assertGreater(data.position, 0)
+            self.assertLess(data.position, destination)
 
     async def test_track_good(self):
         """Test the trackStart and track commands.
@@ -312,12 +312,12 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
                 controllerState=Rotator.ControllerState.ENABLED,
                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY,
             )
-            data = await self.remote.tel_Application.next(
+            data = await self.remote.tel_application.next(
                 flush=True, timeout=STD_TIMEOUT
             )
-            self.assertAlmostEqual(data.Demand, 0)
+            self.assertAlmostEqual(data.demand, 0)
             self.assertAlmostEqual(
-                data.Position, 0, delta=self.csc.mock_ctrl.position_jitter
+                data.position, 0, delta=self.csc.mock_ctrl.position_jitter
             )
             data = await self.remote.evt_inPosition.next(
                 flush=False, timeout=STD_TIMEOUT
@@ -346,12 +346,12 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
                     self.assertAlmostEqual(data.position, pos)
                     self.assertAlmostEqual(data.velocity, vel)
                     self.assertAlmostEqual(data.tai, tai)
-                    data = await self.remote.tel_Application.next(
+                    data = await self.remote.tel_application.next(
                         flush=True, timeout=STD_TIMEOUT
                     )
                     tslop = salobj.current_tai() - tai
                     pos_slop = vel * tslop
-                    self.assertAlmostEqual(data.Demand, pos, delta=pos_slop)
+                    self.assertAlmostEqual(data.demand, pos, delta=pos_slop)
                     await asyncio.sleep(0.1)
 
             track_task = asyncio.create_task(track())
@@ -445,12 +445,12 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
                 controllerState=Rotator.ControllerState.ENABLED,
                 enabledSubstate=Rotator.EnabledSubstate.STATIONARY,
             )
-            data = await self.remote.tel_Application.next(
+            data = await self.remote.tel_application.next(
                 flush=True, timeout=STD_TIMEOUT
             )
-            self.assertAlmostEqual(data.Demand, 0)
+            self.assertAlmostEqual(data.demand, 0)
             self.assertAlmostEqual(
-                data.Position, 0, delta=self.csc.mock_ctrl.position_jitter
+                data.position, 0, delta=self.csc.mock_ctrl.position_jitter
             )
             data = await self.remote.evt_inPosition.next(
                 flush=False, timeout=STD_TIMEOUT
@@ -498,12 +498,12 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
             await self.assert_next_sample(
                 topic=self.remote.evt_tracking, tracking=False, noNewCommand=False
             )
-            data = await self.remote.tel_Application.next(
+            data = await self.remote.tel_application.next(
                 flush=True, timeout=STD_TIMEOUT
             )
-            self.assertAlmostEqual(data.Demand, 0)
+            self.assertAlmostEqual(data.demand, 0)
             self.assertAlmostEqual(
-                data.Position, 0, delta=self.csc.mock_ctrl.position_jitter
+                data.position, 0, delta=self.csc.mock_ctrl.position_jitter
             )
             data = await self.remote.evt_inPosition.next(
                 flush=False, timeout=STD_TIMEOUT

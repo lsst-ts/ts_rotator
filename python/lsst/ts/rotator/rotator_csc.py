@@ -94,7 +94,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
             pathlib.Path(__file__).parents[4].joinpath("schema", "Rotator.yaml")
         )
         super().__init__(
-            name="Rotator",
+            name="MTRotator",
             index=0,
             sync_pattern=constants.ROTATOR_SYNC_PATTERN,
             CommandCode=enums.CommandCode,
@@ -269,10 +269,10 @@ class RotatorCsc(hexrotcomm.BaseCsc):
             applicationStatus=server.telemetry.application_status,
         )
 
-        self.tel_Application.set_put(
-            Demand=server.telemetry.commanded_pos,
-            Position=server.telemetry.current_pos,
-            Error=server.telemetry.commanded_pos - server.telemetry.current_pos,
+        self.tel_application.set_put(
+            demand=server.telemetry.commanded_pos,
+            position=server.telemetry.current_pos,
+            error=server.telemetry.commanded_pos - server.telemetry.current_pos,
         )
         self.tel_rotation.set_put(
             demandPosition=server.telemetry.commanded_pos,
