@@ -1,10 +1,10 @@
-##########
-ts_rotator
-##########
+############
+ts_mtrotator
+############
 
-``ts_rotator`` is a CSC that controls the Simonyi Survey Telescope instrument rotator.
+``ts_mtrotator`` is a CSC that controls the Simonyi Survey Telescope instrument rotator.
 
-`Documentation <https://ts-rotator.lsst.io>`_
+`Documentation <https://ts-mtrotator.lsst.io>`_
 
 The package is compatible with the `eups <https://github.com/RobertLuptonTheGood/eups>`_ package management system and ``scons`` build system.
 Assuming you have the basic Vera C. Rubin LSST DM stack installed you can do the following, from within the package directory:

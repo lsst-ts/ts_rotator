@@ -4,13 +4,13 @@ This configuration only affects single-package Sphinx documentation builds.
 """
 
 from documenteer.sphinxconfig.stackconf import build_package_configs
-import lsst.ts.rotator
+import lsst.ts.mtrotator
 
 
 _g = globals()
 _g.update(
     build_package_configs(
-        project_name="ts_rotator", version=lsst.ts.rotator.__version__
+        project_name="ts_mtrotator", version=lsst.ts.mtrotator.__version__
     )
 )
 

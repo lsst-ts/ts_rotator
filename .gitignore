@@ -6,4 +6,4 @@ pytest_session.txt
 *.log
 __pycache__
 tests/.tests
-python/lsst/ts/rotator/version.py
+python/lsst/ts/mtrotator/version.py

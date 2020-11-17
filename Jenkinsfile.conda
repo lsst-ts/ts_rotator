@@ -1,7 +1,7 @@
 pipeline {
     agent any
     environment {
-        package_name = "rotator"
+        package_name = "ts-mtrotator"
         dockerImageName = "lsstts/conda_package_builder:latest"
         container_name = "salobj_${BUILD_ID}_${JENKINS_NODE_COOKIE}"
     }
@@ -37,7 +37,7 @@ pipeline {
                 }
             }
         }
-        stage("Create Rotator Conda package") {
+        stage("Create ts-mtrotator Conda package") {
             steps {
                 script {
                     sh """
@@ -46,7 +46,7 @@ pipeline {
                 }
             }
         }
-        stage("Push Rotator Conda package") {
+        stage("Push ts-mtrotator Conda package") {
             when { expression { env.TAG_NAME != null } }
             steps {
                 withCredentials([usernamePassword(credentialsId: 'CondaForge', passwordVariable: 'anaconda_pass', usernameVariable: 'anaconda_user')]) {
@@ -55,7 +55,7 @@ pipeline {
                         docker exec ${container_name} sh -c "source ~/miniconda3/bin/activate && \
                             anaconda login --user ${anaconda_user} --password ${anaconda_pass} && \
                             anaconda upload -u lsstts --force \
-                            ~/miniconda3/conda-bld/linux-64/ts-${package_name}*.tar.bz2"
+                            ~/miniconda3/conda-bld/linux-64/${package_name}*.tar.bz2"
                         """
                     }
                 }
@@ -70,7 +70,7 @@ pipeline {
                         docker exec ${container_name} sh -c "source ~/miniconda3/bin/activate && \
                             anaconda login --user ${anaconda_user} --password ${anaconda_pass} && \
                             anaconda upload -u lsstts --force  --label dev \
-                            ~/miniconda3/conda-bld/linux-64/ts-${package_name}*.tar.bz2"
+                            ~/miniconda3/conda-bld/linux-64/${package_name}*.tar.bz2"
                         """
                     }
                 }

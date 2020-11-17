@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# This file is part of ts_rotator.
+# This file is part of ts_mtrotator.
 #
 # Developed for the LSST Telescope and Site Systems.
 # This product includes software developed by the LSST Project
@@ -20,24 +20,20 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import argparse
+"""Monitor and command the MTRotator.
+
+To use::
+
+    command_mtrotator.py
+
+Then wait for it to connect. Once it has connected it will print
+initial rotator status and help.
+
+Commands are entered by typing the command and arguments (if any),
+separated by spaces, then <return>. "help" is a command.
+"""
 import asyncio
-import logging
 
-from lsst.ts import rotator
+from lsst.ts import mtrotator
 
-
-async def main():
-    parser = argparse.ArgumentParser("Run mock rotator PXI code")
-    parser.add_argument("host", help="IP address of rotator CSC")
-    args = parser.parse_args()
-
-    log = logging.getLogger("MockRotator")
-    log.addHandler(logging.StreamHandler())
-    log.setLevel(logging.DEBUG)
-    rotator.MockMTRotatorController(log=log, host=args.host)
-    print(f"Mock rotator controller constructed with host={args.host}; waiting forever")
-    await asyncio.Future()
-
-
-asyncio.run(main())
+asyncio.run(mtrotator.RotatorCommander.amain(index=None))

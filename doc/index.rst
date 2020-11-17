@@ -1,33 +1,33 @@
-.. py:currentmodule:: lsst.ts.rotator
+.. py:currentmodule:: lsst.ts.mtrotator
 
-.. _lsst.ts.rotator:
+.. _lsst.ts.mtrotator:
 
-###############
-lsst.ts.rotator
-###############
+#################
+lsst.ts.mtrotator
+#################
 
 .. image:: https://img.shields.io/badge/Project Metadata-gray.svg
-    :target: https://ts-xml.lsst.io/index.html#index-master-csc-table-rotator
+    :target: https://ts-xml.lsst.io/index.html#index-master-csc-table-mtrotator
 .. image:: https://img.shields.io/badge/SAL\ Interface-gray.svg
-    :target: https://ts-xml.lsst.io/sal_interfaces/Rotator.html
+    :target: https://ts-xml.lsst.io/sal_interfaces/MTRotator.html
 .. image:: https://img.shields.io/badge/GitHub-gray.svg
-    :target: https://github.com/lsst-ts/ts_rotator
+    :target: https://github.com/lsst-ts/ts_mtrotator
 .. image:: https://img.shields.io/badge/Jira-gray.svg
-    :target: https://jira.lsstcorp.org/issues/?jql=labels+%3D+ts_rotator
+    :target: https://jira.lsstcorp.org/issues/?jql=labels+%3D+ts_mtrotator
 
 Overview
 ========
 
-The Rotator CSC controls the camera rotator on the Simonyi Survey Telescope.
+The MTRotator CSC controls the camera rotator on the Simonyi Survey Telescope.
 
 User Guide
 ==========
 
-Start the Rotator CSC as follows:
+Start the MTRotator CSC as follows:
 
 .. prompt:: bash
 
-    run_rotator.py
+    run_mtrotator.py
 
 Then check that the CSC has control of the low-level controller, as follows:
 
@@ -35,9 +35,9 @@ Then check that the CSC has control of the low-level controller, as follows:
   This should happen quickly; if it does not then check that the low-level controller is fully booted up and configured to use the correct IP address for the CSC.
 * Check the ``controllerState`` event.
   If it is ``state=Offline, offline_substate=PublishOnly``, which is the state the low-level controller wakes up in,
-  then you must :ref:`use the EUI <lsst.ts.rotator.eui>` to change the state.
+  then you must :ref:`use the EUI <lsst.ts.mtrotator.eui>` to change the state.
 * Check the ``commandableByDDS`` event.
-  If ``state=False`` then you must :ref:`use the EUI <lsst.ts.rotator.eui>` to change the control mode.
+  If ``state=False`` then you must :ref:`use the EUI <lsst.ts.mtrotator.eui>` to change the control mode.
 
 Notes
 -----
@@ -66,9 +66,9 @@ The CSC includes a simulation mode. To run using CSC's internal simulator:
 
 .. prompt:: bash
 
-    run_rotator.py --simulate
+    run_mtrotator.py --simulate
 
-.. _lsst.ts.rotator.eui:
+.. _lsst.ts.mtrotator.eui:
 
 The Engineering User Interface (EUI)
 ------------------------------------

@@ -35,7 +35,7 @@ class RotatorCommander(salobj.CscCommander):
     def __init__(self, enable):
         self.tracking_task = asyncio.Future()
         super().__init__(
-            name="Rotator", index=0, enable=enable,
+            name="MTRotator", index=0, enable=enable,
         )
         self.help_dict["ramp"] = "start_position end_position velocity "
         "# track a path of constant",
