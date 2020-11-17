@@ -1,4 +1,4 @@
-# This file is part of ts_rotator.
+# This file is part of ts_mtrotator.
 #
 # Developed for the LSST Data Management System.
 # This product includes software developed by the LSST Project
@@ -27,7 +27,7 @@ import asynctest
 
 from lsst.ts import hexrotcomm
 from lsst.ts import salobj
-from lsst.ts import rotator
+from lsst.ts import mtrotator
 from lsst.ts.idl.enums.MTRotator import ControllerState, EnabledSubstate
 
 STD_TIMEOUT = 30  # timeout for command ack
@@ -35,7 +35,7 @@ STD_TIMEOUT = 30  # timeout for command ack
 
 class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
     def basic_make_csc(self, initial_state, simulation_mode=1, config_dir=None):
-        return rotator.RotatorCsc(
+        return mtrotator.RotatorCsc(
             initial_state=initial_state,
             simulation_mode=simulation_mode,
             config_dir=config_dir,
@@ -47,7 +47,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         await self.check_bin_script(
             name="MTRotator",
             index=None,
-            exe_name="run_rotator.py",
+            exe_name="run_mtrotator.py",
             cmdline_args=["--simulate"],
         )
 
@@ -82,7 +82,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
             )
             self.assertAlmostEqual(data.accelerationLimit, new_limit)
 
-            for bad_alimit in (-1, 0, rotator.MAX_ACCEL_LIMIT + 0.001):
+            for bad_alimit in (-1, 0, mtrotator.MAX_ACCEL_LIMIT + 0.001):
                 with self.subTest(bad_alimit=bad_alimit):
                     with salobj.assertRaisesAckError(ack=salobj.SalRetCode.CMD_FAILED):
                         await self.remote.cmd_configureAcceleration.set_start(
@@ -106,7 +106,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
             )
             self.assertAlmostEqual(data.velocityLimit, new_limit)
 
-            for bad_vlimit in (0, -1, rotator.MAX_VEL_LIMIT + 0.001):
+            for bad_vlimit in (0, -1, mtrotator.MAX_VEL_LIMIT + 0.001):
                 with self.subTest(bad_vlimit=bad_vlimit):
                     with salobj.assertRaisesAckError(ack=salobj.SalRetCode.CMD_FAILED):
                         await self.remote.cmd_configureVelocity.set_start(

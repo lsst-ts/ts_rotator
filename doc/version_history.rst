@@ -1,6 +1,6 @@
-.. py:currentmodule:: lsst.ts.rotator
+.. py:currentmodule:: lsst.ts.mtrotator
 
-.. _lsst.ts.rotator.version_history:
+.. _lsst.ts.mtrotator.version_history:
 
 ###############
 Version History

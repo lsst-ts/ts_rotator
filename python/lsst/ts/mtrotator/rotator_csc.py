@@ -1,4 +1,4 @@
-# This file is part of ts_rotator.
+# This file is part of ts_mtrotator.
 #
 # Developed for the LSST Data Management System.
 # This product includes software developed by the LSST Project
@@ -35,7 +35,7 @@ from . import mock_controller
 
 
 class RotatorCsc(hexrotcomm.BaseCsc):
-    """MT rotator CSC.
+    """MTRotator CSC.
 
     Parameters
     ----------
@@ -91,7 +91,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         self._prev_flags_tracking_lost = False
 
         schema_path = (
-            pathlib.Path(__file__).parents[4].joinpath("schema", "Rotator.yaml")
+            pathlib.Path(__file__).parents[4].joinpath("schema", "MTRotator.yaml")
         )
         super().__init__(
             name="MTRotator",

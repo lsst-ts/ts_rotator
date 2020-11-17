@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-# This file is part of ts_rotator.
+# This file is part of ts_mtrotator.
 #
 # Developed for the LSST Telescope and Site Systems.
 # This product includes software developed by the LSST Project
@@ -24,7 +24,7 @@ import argparse
 import asyncio
 import logging
 
-from lsst.ts import rotator
+from lsst.ts import mtrotator
 
 
 async def main():
@@ -35,7 +35,7 @@ async def main():
     log = logging.getLogger("MockRotator")
     log.addHandler(logging.StreamHandler())
     log.setLevel(logging.DEBUG)
-    rotator.MockMTRotatorController(log=log, host=args.host)
+    mtrotator.MockMTRotatorController(log=log, host=args.host)
     print(f"Mock rotator controller constructed with host={args.host}; waiting forever")
     await asyncio.Future()
 

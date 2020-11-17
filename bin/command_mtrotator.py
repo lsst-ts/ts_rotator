@@ -1,9 +1,9 @@
 #!/usr/bin/env python
-"""Monitor and command the MT Rotator.
+"""Monitor and command the MTRotator.
 
-To use:
+To use::
 
-command_rotator.py
+    command_mtrotator.py
 
 Then wait for it to connect. Once it has connected it will print
 initial rotator status and help.
@@ -13,6 +13,6 @@ separated by spaces, then <return>. "help" is a command.
 """
 import asyncio
 
-from lsst.ts import rotator
+from lsst.ts import mtrotator
 
-asyncio.run(rotator.RotatorCommander.amain(index=None))
+asyncio.run(mtrotator.RotatorCommander.amain(index=None))

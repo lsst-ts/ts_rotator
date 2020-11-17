@@ -1,6 +1,7 @@
-# This file is part of ts_rotator.
+#!/usr/bin/env python
+# This file is part of ts_mtrotator.
 #
-# Developed for the LSST Data Management System.
+# Developed for the LSST Telescope and Site Systems.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -19,14 +20,9 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-from .constants import *
-from .enums import *
-from .structs import *
-from .mock_controller import *
-from .rotator_commander import *
-from .rotator_csc import *
+"""An example of how to run a CSC"""
+import asyncio
 
-try:
-    from .version import *
-except ImportError:
-    __version__ = "?"
+from lsst.ts.mtrotator import RotatorCsc
+
+asyncio.run(RotatorCsc.amain(index=None))
