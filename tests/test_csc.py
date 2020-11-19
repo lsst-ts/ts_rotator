@@ -113,83 +113,48 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
                             vlimit=bad_vlimit, timeout=STD_TIMEOUT
                         )
 
-    async def assert_rotation(
-        self,
-        demand_position=None,
-        demand_velocity=None,
-        demand_acceleration=None,
-        actual_position=None,
-        actual_velocity=None,
-        tai_time=None,
-    ):
-        """Check the next rotation and Application telemetry messages.
-
-        Parameters
-        ----------
-        demand_position : `float` or `None`
-            Predicted value of demand position. Ignore if `None`.
-        demand_velocity : `float` or `None`
-            Predicted value of demand velocity. Ignore if `None`.
-        demand_acceleration : `float` or `None`
-            Predicted value of demand acceleration. Ignore if `None`.
-        actual_position : `float` or `None`
-            Predicted value of actual position. Ignore if `None`.
-        actual_velocity : `float` or `None`
-            Predicted value of actual velocity. Ignore if `None`.
-        tai_time : `float` or `None`
-            TAI time at which you computed demand and actual position.
-            If not `None` then  adjust demand_position and actual_position for
-            the reported demand velocity, demand acceleration and timestamp.
+    async def check_rotation(self):
+        """Check the next rotation telemetry messages.
         """
-        application_data = await self.remote.tel_application.next(
-            flush=True, timeout=STD_TIMEOUT
-        )
+        # We need some margin, slightly more than I naively expected,
+        # possibly because there is some roundoff error in converting time
+        # between TAI unix seconds and astropy times.
+        slop = 1e-6
+
         rotation_data = await self.remote.tel_rotation.next(
             flush=True, timeout=STD_TIMEOUT
         )
-        if tai_time is None:
-            delta_tai = 0
-        else:
-            delta_tai = rotation_data.timestamp - tai_time
-
-        if demand_velocity is not None:
-            self.assertAlmostEqual(rotation_data.demandVelocity, demand_velocity)
-        if demand_acceleration is not None:
-            self.assertAlmostEqual(
-                rotation_data.demandAcceleration, demand_acceleration
-            )
-        if demand_position is not None:
-            adjusted_demand_position = (
-                demand_position
-                + rotation_data.demandVelocity * delta_tai
-                + 0.5 * rotation_data.demandAcceleration * delta_tai ** 2
-            )
-            self.assertAlmostEqual(application_data.demand, adjusted_demand_position)
-            self.assertAlmostEqual(
-                rotation_data.demandPosition, adjusted_demand_position
-            )
-        if actual_velocity is not None:
-            self.assertAlmostEqual(
-                rotation_data.actualVelocity,
-                actual_velocity,
-                delta=self.csc.mock_ctrl.position_jitter,
-            )
-        if actual_position is not None:
-            adjusted_actual_position = (
-                actual_position
-                + rotation_data.demandVelocity * delta_tai
-                + 0.5 * rotation_data.demandAcceleration * delta_tai ** 2
-            )
-            self.assertAlmostEqual(
-                application_data.position,
-                adjusted_actual_position,
-                delta=self.csc.mock_ctrl.position_jitter,
-            )
-            self.assertAlmostEqual(
-                rotation_data.actualPosition,
-                adjusted_actual_position,
-                delta=self.csc.mock_ctrl.position_jitter,
-            )
+        path_segment = self.csc.mock_ctrl.rotator.path.at(rotation_data.timestamp)
+        # Print the values to get some idea of how much slop is needed
+        # and so it is easier to determine which test failed
+        # in the tracking task in test_track_good.
+        print(
+            f"delta_pos={abs(rotation_data.demandPosition - path_segment.position):0.8f}"
+        )
+        print(
+            f"delta_vel={abs(rotation_data.demandVelocity - path_segment.velocity):0.8f}"
+        )
+        print(
+            f"delta_acc={abs(rotation_data.demandAcceleration - path_segment.acceleration):0.8f}"
+        )
+        self.assertAlmostEqual(
+            rotation_data.demandPosition, path_segment.position, delta=slop
+        )
+        self.assertAlmostEqual(
+            rotation_data.demandVelocity, path_segment.velocity, delta=slop
+        )
+        self.assertAlmostEqual(
+            rotation_data.demandAcceleration, path_segment.acceleration, delta=slop
+        )
+        # actualPosition has jitter but actualVelocity does not.
+        self.assertAlmostEqual(
+            rotation_data.actualPosition,
+            path_segment.position,
+            delta=slop + self.csc.mock_ctrl.position_jitter,
+        )
+        self.assertAlmostEqual(
+            rotation_data.actualVelocity, path_segment.velocity, delta=slop
+        )
 
     async def test_move(self):
         """Test the move command for point to point motion.
@@ -204,13 +169,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
                 controllerState=ControllerState.ENABLED,
                 enabledSubstate=EnabledSubstate.STATIONARY,
             )
-            await self.assert_rotation(
-                demand_position=0,
-                demand_velocity=0,
-                demand_acceleration=0,
-                actual_position=0,
-                actual_velocity=0,
-            )
+            await self.check_rotation()
             data = await self.remote.evt_inPosition.next(
                 flush=False, timeout=STD_TIMEOUT
             )
@@ -240,19 +199,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
                 controllerState=ControllerState.ENABLED,
                 enabledSubstate=EnabledSubstate.STATIONARY,
             )
-            # Read a few telemetry samples to allow the
-            # slew to truly finish.
-            for i in range(3):
-                data = await self.remote.tel_application.next(
-                    flush=True, timeout=STD_TIMEOUT
-                )
-            await self.assert_rotation(
-                demand_position=destination,
-                demand_velocity=0,
-                demand_acceleration=0,
-                actual_position=destination,
-                actual_velocity=0,
-            )
+            await self.check_rotation()
 
     async def test_stop_move(self):
         """Test stopping a point to point move.
@@ -346,12 +293,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
                     self.assertAlmostEqual(data.position, pos)
                     self.assertAlmostEqual(data.velocity, vel)
                     self.assertAlmostEqual(data.tai, tai)
-                    data = await self.remote.tel_application.next(
-                        flush=True, timeout=STD_TIMEOUT
-                    )
-                    tslop = salobj.current_tai() - tai
-                    pos_slop = vel * tslop
-                    self.assertAlmostEqual(data.demand, pos, delta=pos_slop)
+                    await self.check_rotation()
                     await asyncio.sleep(0.1)
 
             track_task = asyncio.create_task(track())
@@ -360,9 +302,12 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
                     flush=False, timeout=STD_TIMEOUT + est_slew_duration
                 )
                 self.assertTrue(data.inPosition)
-                # Make sure the track task did not fail.
+            except asyncio.TimeoutError:
+                # It is likely the track task failed.
                 if track_task.done():
-                    self.fail(f"Track task failed: {track_task.exception()}")
+                    self.fail(f"Tracking task failed: {track_task.exception()}")
+                else:
+                    self.fail("Timed out while waiting for the inPosition event")
             finally:
                 track_task.cancel()
 
