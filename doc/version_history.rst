@@ -26,7 +26,7 @@ Changes:
 
 Requires:
 
-* ts_hexrotcomm 0.11
+* ts_hexrotcomm 0.12
 * ts_salobj 6.1
 * ts_simactuators 1
 * ts_idl 2.2
