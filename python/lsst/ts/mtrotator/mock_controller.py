@@ -18,7 +18,7 @@
 #
 # You should have received a copy of the GNU General Public License
 
-__all__ = ["MockMTRotatorController"]
+__all__ = ["MockMTRotatorController", "TRACK_TIMEOUT"]
 
 import asyncio
 import math
@@ -252,11 +252,10 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
         self.tracking_timed_out = True
         self.set_state(ControllerState.FAULT)
 
-    async def update_telemetry(self):
+    async def update_telemetry(self, curr_tai):
         try:
             # Add jitter to the current position, for realism
             # and to exercise RotatorCommander filtering of jitter.
-            curr_tai = salobj.current_tai()
             curr_segment = self.rotator.path.at(curr_tai)
             curr_pos = curr_segment.position + self.position_jitter * (
                 random.random() - 0.5
@@ -273,9 +272,9 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
             self.telemetry.input_pin_states = 0
             self.telemetry.copley_fault_status_register = (0, 0)
             self.telemetry.application_status = ApplicationStatus.DDS_COMMAND_SOURCE
-            self.telemetry.commanded_pos = cmd_target.position
-            self.telemetry.commanded_vel = cmd_target.velocity
-            self.telemetry.commanded_accel = cmd_target.acceleration
+            self.telemetry.demand_pos = curr_segment.position
+            self.telemetry.demand_vel = curr_segment.velocity
+            self.telemetry.demand_accel = curr_segment.acceleration
             self.telemetry.current_pos = curr_pos
             self.telemetry.current_vel_ch_a_fb = curr_segment.velocity
             self.telemetry.current_vel_ch_b_fb = curr_segment.velocity

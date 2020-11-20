@@ -6,6 +6,33 @@
 Version History
 ###############
 
+v0.10.0
+=======
+
+Changes:
+
+* Update to use and require ts_hexrotcomm 0.12:
+
+    * Add argument ``curr_tai`` to `MockMTRotatorController.update_telemetry` and use it.
+
+* Update the mock controller to report generated path data instead of target data
+  in the telemetry fields used to set the demand fields of the rotation and application telemetry topics.
+  This matches what the real rotator does.
+* Update the unit tests to handle the new rotation and application telemetry data.
+* Rename the `Telemetry` struct demand field names to clarify their content.
+* Update the rotator commander to handle the rotation telemetry event better.
+  Ignore the timestamp field when deciding whether the information has changed enough to justify printing the new sample.
+  Update the custom motors telemetry callback to work in the same way, ignoring the raw field when deciding whether to print the data.
+
+Requires:
+
+* ts_hexrotcomm 0.12
+* ts_salobj 6.1
+* ts_simactuators 1
+* ts_idl 2.2
+* ts_xml 7
+* MTRotator IDL files, e.g. made using ``make_idl_files.py MTRotator``
+
 v0.9.0
 ======
 

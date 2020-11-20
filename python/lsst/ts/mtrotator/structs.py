@@ -61,9 +61,12 @@ class Telemetry(ctypes.Structure):
         ("copley_fault_status_register", ctypes.c_uint32 * 2),
         ("application_status", ctypes.c_uint),
         # simulink telemetry
-        ("commanded_pos", ctypes.c_double),
-        ("commanded_vel", ctypes.c_double),
-        ("commanded_accel", ctypes.c_double),
+        # Values computed by the path generator.
+        # They are called "Cmd" in Moog's code.
+        ("demand_pos", ctypes.c_double),
+        ("demand_vel", ctypes.c_double),
+        ("demand_accel", ctypes.c_double),
+        # Position set by the POSITION_SET command.
         ("set_pos", ctypes.c_double),
         ("state", ctypes.c_double),
         ("enabled_substate", ctypes.c_double),
@@ -81,6 +84,7 @@ class Telemetry(ctypes.Structure):
         ("state_estimation_ch_b_fb", ctypes.c_double),
         ("state_estimation_ch_a_motor_encoder", ctypes.c_double),
         ("state_estimation_ch_b_motor_encoder", ctypes.c_double),
+        # Position and velocity measured by the position encoders.
         ("current_pos", ctypes.c_double),
         ("current_vel_ch_a_fb", ctypes.c_double),
         ("current_vel_ch_b_fb", ctypes.c_double),
