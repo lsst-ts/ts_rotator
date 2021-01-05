@@ -277,11 +277,11 @@ class RotatorCsc(hexrotcomm.BaseCsc):
             actualPosition=server.telemetry.current_pos,
             actualVelocity=(
                 server.telemetry.current_vel_ch_a_fb
-                + server.telemetry.current_vel_ch_a_fb
+                + server.telemetry.current_vel_ch_b_fb
             )
             / 2,
             debugActualVelocityA=server.telemetry.current_vel_ch_a_fb,
-            debugActualVelocityB=server.telemetry.current_vel_ch_a_fb,
+            debugActualVelocityB=server.telemetry.current_vel_ch_b_fb,
             timestamp=tel_tai_unix,
         )
         self.tel_electrical.set_put(
