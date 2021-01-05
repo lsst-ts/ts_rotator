@@ -23,8 +23,6 @@ __all__ = ["RotatorCsc"]
 
 import pathlib
 
-import astropy.time
-
 from lsst.ts import salobj
 from lsst.ts import hexrotcomm
 from lsst.ts.idl.enums.MTRotator import EnabledSubstate, ApplicationStatus
@@ -252,10 +250,8 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         server : `lsst.ts.hexrotcomm.CommandTelemetryServer`
             TCP/IP server.
         """
-        tel_time = astropy.time.Time(
-            server.header.mjd, server.header.mjd_frac, format="mjd", scale="utc"
-        )
-        tel_tai_unix = salobj.tai_from_utc(tel_time)
+        tel_utc_unix = server.header.tv_sec + server.header.tv_nsec / 1e9
+        tel_tai_unix = salobj.tai_from_utc(tel_utc_unix)
         if self._tracking_started_telemetry_counter > 0:
             self._tracking_started_telemetry_counter -= 1
         self.evt_summaryState.set_put(summaryState=self.summary_state)
@@ -281,11 +277,11 @@ class RotatorCsc(hexrotcomm.BaseCsc):
             actualPosition=server.telemetry.current_pos,
             actualVelocity=(
                 server.telemetry.current_vel_ch_a_fb
-                + server.telemetry.current_vel_ch_a_fb
+                + server.telemetry.current_vel_ch_b_fb
             )
             / 2,
             debugActualVelocityA=server.telemetry.current_vel_ch_a_fb,
-            debugActualVelocityB=server.telemetry.current_vel_ch_a_fb,
+            debugActualVelocityB=server.telemetry.current_vel_ch_b_fb,
             timestamp=tel_tai_unix,
         )
         self.tel_electrical.set_put(
