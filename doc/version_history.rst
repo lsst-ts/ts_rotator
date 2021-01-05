@@ -6,10 +6,24 @@
 Version History
 ###############
 
-v0.10.1
+v0.10.2
 =======
 
 Changes:
+
+* Work around incorrectly reported time in telemetry headers (DM-28224).
+* Fix incorrect values for ``actualVelocity`` and ``debugActualVelocityB`` in the ``rotation`` telemetry topic.
+
+Requires:
+* ts_hexrotcomm 0.12
+* ts_salobj 6.1
+* ts_simactuators 1
+* ts_idl 2.2
+* ts_xml 7.0
+* MTRotator IDL files, e.g. made using ``make_idl_files.py MTRotator``
+
+v0.10.1
+=======
 
 Changes:
 
