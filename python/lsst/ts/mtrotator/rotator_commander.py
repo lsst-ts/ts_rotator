@@ -62,17 +62,6 @@ class RotatorCommander(salobj.CscCommander):
         kwargs = self.check_arguments(args, "start_position", "amplitude", "period")
         self.tracking_task = asyncio.ensure_future(self._sine(**kwargs))
 
-    def format_dict(self, **kwargs):
-        """Return telemetry or event data formatted for printing.
-
-        This variant of format_data works is provided to support
-        `_special_telemetry_callback`.
-
-        The formatting the same as `format_data`: a comma-separate list
-        of items formatted by `format_item`.
-        """
-        return ", ".join(self.format_item(key, value) for key, value in kwargs.items())
-
     def _special_telemetry_callback(self, data, name, omit_field):
         """Callback for telemetry omitting one specified field
         from the comparison, but printing it.
@@ -87,12 +76,13 @@ class RotatorCommander(salobj.CscCommander):
             Field to omit from the comparison.
         """
         prev_value_name = f"previous_tel_{name}"
-        public_fields = self.get_rounded_public_fields(data)
-        omit_value = public_fields.pop(omit_field)
-        if public_fields == getattr(self, prev_value_name):
+        public_data = self.get_rounded_public_fields(data)
+        trimmed_data = public_data.copy()
+        trimmed_data.pop(omit_field)
+        if trimmed_data == getattr(self, prev_value_name):
             return
-        setattr(self, prev_value_name, public_fields)
-        formatted_data = self.format_dict(**public_fields, **{omit_field: omit_value})
+        setattr(self, prev_value_name, trimmed_data)
+        formatted_data = self.format_dict(public_data)
         self.output(f"{data.private_sndStamp:0.3f}: {name}: {formatted_data}")
 
     async def tel_motors_callback(self, data):
