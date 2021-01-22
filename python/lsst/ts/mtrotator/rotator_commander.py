@@ -1,5 +1,5 @@
 #
-# Developed for the LSST Data Management System.
+# Developed for the Rubin Observatory Telescope and Site System.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -62,7 +62,7 @@ class RotatorCommander(salobj.CscCommander):
         kwargs = self.check_arguments(args, "start_position", "amplitude", "period")
         self.tracking_task = asyncio.ensure_future(self._sine(**kwargs))
 
-    def _special_telemetry_callback(self, data, name, omit_field):
+    def _special_telemetry_callback(self, data, name, omit_field, digits=2):
         """Callback for telemetry omitting one specified field
         from the comparison, but printing it.
 
@@ -76,7 +76,7 @@ class RotatorCommander(salobj.CscCommander):
             Field to omit from the comparison.
         """
         prev_value_name = f"previous_tel_{name}"
-        public_data = self.get_rounded_public_fields(data)
+        public_data = self.get_rounded_public_fields(data, digits=digits)
         trimmed_data = public_data.copy()
         trimmed_data.pop(omit_field)
         if trimmed_data == getattr(self, prev_value_name):
@@ -93,7 +93,9 @@ class RotatorCommander(salobj.CscCommander):
         data : `object`
             MTRotator motors telemetry data.
         """
-        self._special_telemetry_callback(data=data, name="motors", omit_field="raw")
+        self._special_telemetry_callback(
+            data=data, name="motors", omit_field="raw", digits=1
+        )
 
     async def tel_rotation_callback(self, data):
         """Don't print if only the timestamp has changed.

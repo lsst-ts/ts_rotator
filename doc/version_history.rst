@@ -6,6 +6,23 @@
 Version History
 ###############
 
+v0.11.0
+=======
+
+Changes:
+
+* Updated to use device-specific TCP/IP ports.
+  This requires ts_hexrotcomm v0.14.
+* Update `RotatorCommander` to round motors data to 1 digit to reduce spurious output.
+
+Requires:
+* ts_hexrotcomm 0.14
+* ts_salobj 6.1
+* ts_simactuators 1
+* ts_idl 2.2
+* ts_xml 7.0
+* MTRotator IDL files, e.g. made using ``make_idl_files.py MTRotator``
+
 v0.10.3
 =======
 
