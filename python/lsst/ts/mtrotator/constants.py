@@ -1,6 +1,6 @@
 # This file is part of ts_mtrotator.
 #
-# Developed for the LSST Data Management System.
+# Developed for the Rubin Observatory Telescope and Site System.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -29,3 +29,7 @@ MAX_ACCEL_LIMIT = 1.0
 
 # Required value of command.sync_pattern for rotator commands.
 ROTATOR_SYNC_PATTERN = 0x5555
+
+# Port the low-level controller uses for telemetry and configuration messages.
+# The command port is one larger.
+TELEMETRY_PORT = 5570

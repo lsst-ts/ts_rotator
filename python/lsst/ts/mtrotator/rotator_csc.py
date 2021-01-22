@@ -1,6 +1,6 @@
 # This file is part of ts_mtrotator.
 #
-# Developed for the LSST Data Management System.
+# Developed for the Rubin Observatory Telescope and Site System.
 # This product includes software developed by the LSST Project
 # (https://www.lsst.org).
 # See the COPYRIGHT file at the top-level directory of this distribution
@@ -94,6 +94,7 @@ class RotatorCsc(hexrotcomm.BaseCsc):
         super().__init__(
             name="MTRotator",
             index=0,
+            port=constants.TELEMETRY_PORT,
             sync_pattern=constants.ROTATOR_SYNC_PATTERN,
             CommandCode=enums.CommandCode,
             ConfigClass=structs.Config,
