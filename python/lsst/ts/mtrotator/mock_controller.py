@@ -85,8 +85,8 @@ class MockMTRotatorController(hexrotcomm.BaseMockController):
         self,
         log,
         host=hexrotcomm.LOCAL_HOST,
-        command_port=hexrotcomm.COMMAND_PORT,
-        telemetry_port=hexrotcomm.TELEMETRY_PORT,
+        command_port=constants.TELEMETRY_PORT + 1,
+        telemetry_port=constants.TELEMETRY_PORT,
         initial_state=ControllerState.OFFLINE,
     ):
         self.encoder_resolution = 200_000  # counts/deg; arbitrary
