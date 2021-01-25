@@ -20,11 +20,14 @@
 __all__ = ["RotatorCommander"]
 
 import asyncio
-import math
 
 from lsst.ts import salobj
+from lsst.ts import simactuators
 
 STD_TIMEOUT = 5  # timeout for command ack
+
+# How far in advance to set the time field of tracking commands (seconds)
+TRACK_ADVANCE_TIME = 0.05
 
 TRACK_INTERVAL = 0.1  # interval between tracking updates (seconds)
 
@@ -35,10 +38,10 @@ class RotatorCommander(salobj.CscCommander):
         super().__init__(
             name="MTRotator", index=0, enable=enable,
         )
-        self.help_dict["ramp"] = "start_position end_position velocity "
+        self.help_dict["ramp"] = "start_position end_position speed "
         "# track a path of constant",
-        self.help_dict["sine"] = "start_position amplitude "
-        "# track one cycle of a sine wave",
+        self.help_dict["cosine"] = "center_position, amplitude, max_speed "
+        "# track one cycle of a cosine wave",
         for command_to_ignore in ("abort", "setValue"):
             del self.command_dict[command_to_ignore]
 
@@ -47,20 +50,18 @@ class RotatorCommander(salobj.CscCommander):
         await super().close()
 
     async def do_ramp(self, args):
-        """Track from start_position to end_position at the specified velocity.
+        """Track from start_position to end_position at the specified speed.
         """
         self.tracking_task.cancel()
-        kwargs = self.check_arguments(
-            args, "start_position", "end_position", "velocity"
-        )
+        kwargs = self.check_arguments(args, "start_position", "end_position", "speed")
         self.tracking_task = asyncio.ensure_future(self._ramp(**kwargs))
 
-    async def do_sine(self, args):
-        """Track along a sine wave (one full cycle).
+    async def do_cosine(self, args):
+        """Track along a cosine wave (one full cycle).
         """
         self.tracking_task.cancel()
-        kwargs = self.check_arguments(args, "start_position", "amplitude", "period")
-        self.tracking_task = asyncio.ensure_future(self._sine(**kwargs))
+        kwargs = self.check_arguments(args, "center_position", "amplitude", "max_speed")
+        self.tracking_task = asyncio.ensure_future(self._cosine(**kwargs))
 
     def _special_telemetry_callback(self, data, name, omit_field, digits=2):
         """Callback for telemetry omitting one specified field
@@ -109,7 +110,7 @@ class RotatorCommander(salobj.CscCommander):
             data=data, name="rotation", omit_field="timestamp"
         )
 
-    async def _ramp(self, start_position, end_position, velocity):
+    async def _ramp(self, start_position, end_position, speed):
         """Track a linear ramp.
 
         Parameters
@@ -118,28 +119,26 @@ class RotatorCommander(salobj.CscCommander):
             Starting position of ramp (deg).
         end_position : `float`
             Ending position of ramp (deg).
-        velocity : `float`
-            Velocity of motion along the ramp (deg/sec).
+        speed : `float`
+            Speed of motion along the ramp (deg/sec).
         """
         try:
-            if velocity == 0:
-                raise ValueError(f"velocity {velocity} must be nonzero")
-            dt = (end_position - start_position) / velocity
-            if dt < 0:
-                raise ValueError(f"velocity {velocity} has the wrong sign")
-            print(
-                f"starting tracking a ramp from {start_position} to {end_position} at velocity {velocity}; "
-                f"this will take {dt:0.2f} seconds"
+            ramp_generator = simactuators.RampGenerator(
+                start_positions=[start_position],
+                end_positions=[end_position],
+                speeds=[speed],
+                advance_time=TRACK_ADVANCE_TIME,
             )
-            dpos = velocity * TRACK_INTERVAL
-            nelts = int(dt / TRACK_INTERVAL)
+            print(
+                f"Tracking a ramp from {start_position} to {end_position} at speed {speed}; "
+                f"this will take {ramp_generator.duration:0.2f} seconds"
+            )
             await self.remote.cmd_trackStart.start(timeout=STD_TIMEOUT)
-            for i in range(nelts):
-                pos = start_position + i * dpos
+            for positions, velocities, tai in ramp_generator():
                 await self.remote.cmd_track.set_start(
-                    angle=pos,
-                    velocity=velocity,
-                    tai=salobj.current_tai(),
+                    angle=positions[0],
+                    velocity=velocities[0],
+                    tai=tai,
                     timeout=STD_TIMEOUT,
                 )
                 await asyncio.sleep(TRACK_INTERVAL)
@@ -150,7 +149,7 @@ class RotatorCommander(salobj.CscCommander):
         finally:
             await self.remote.cmd_stop.start(timeout=STD_TIMEOUT)
 
-    async def _sine(self, start_position, amplitude, period):
+    async def _cosine(self, center_position, amplitude, max_speed):
         """Track one sine wave of specified amplitude and period.
 
         The range of motion is period - amplitude to period + amplitude,
@@ -158,40 +157,40 @@ class RotatorCommander(salobj.CscCommander):
 
         Parameters
         ----------
-        start_position : `float`
-            Midpoint of sine wave (deg).
+        center_position : `float`
+            Midpoint of cosine wave (deg).
         amplitude : `float`
-            Amplitude of sine wave (deg).
-        period : `float`
-            Duration of motion: one full wave (sec).
+            Amplitude of cosine wave (deg).
+        max_speed : `float`
+            Maximum speed of motion (deg/sec).
         """
         try:
-            if period <= 0:
-                raise ValueError(f"period {period} must be positive")
-            print(
-                f"starting tracking one cycle of a sine wave centered at {start_position} "
-                f"with amplitude {amplitude} and a period of {period}"
-            )
-            nelts = int(period / TRACK_INTERVAL)
-            vmax = amplitude * 2 * math.pi / period
             settings = self.remote.evt_configuration.get()
             if settings is None:
                 raise RuntimeError(
                     "Must wait until configuration seen so we can check max velocity"
                 )
-            if abs(vmax) > settings.velocityLimit:
+            if abs(max_speed) > settings.velocityLimit:
                 raise ValueError(
-                    f"maximum velocity {vmax} > allowed {settings.velocityLimit}"
+                    f"maximum speed {max_speed} > allowed {settings.velocityLimit}"
                 )
+            cosine_generator = simactuators.CosineGenerator(
+                center_positions=[center_position],
+                amplitudes=[amplitude],
+                max_speeds=[max_speed],
+                advance_time=TRACK_ADVANCE_TIME,
+            )
+            print(
+                f"Tracking one cycle of a cosine wave centered at {center_position} "
+                f"with amplitude {amplitude}; "
+                f"this will take {cosine_generator.duration:0.2f} seconds"
+            )
             await self.remote.cmd_trackStart.start(timeout=STD_TIMEOUT)
-            for i in range(nelts):
-                angle_rad = 2 * math.pi * i / nelts
-                pos = amplitude * math.sin(angle_rad) + start_position
-                velocity = vmax * math.cos(angle_rad)
+            for positions, velocities, tai in cosine_generator():
                 await self.remote.cmd_track.set_start(
-                    angle=pos,
-                    velocity=velocity,
-                    tai=salobj.current_tai(),
+                    angle=positions[0],
+                    velocity=velocities[0],
+                    tai=tai,
                     timeout=STD_TIMEOUT,
                 )
                 await asyncio.sleep(TRACK_INTERVAL)
