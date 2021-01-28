@@ -20,6 +20,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
+import contextlib
 import unittest
 import time
 
@@ -32,86 +33,27 @@ from lsst.ts.idl.enums.MTRotator import ControllerState, EnabledSubstate
 
 STD_TIMEOUT = 30  # timeout for command ack
 
+# Time for a few telemetry updates and the mock CCW controller
+# to respond to them (seconds).
+WAIT_FOR_CCW_DELAY = 0.5
+
 
 class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
+    def setUp(self):
+        # The amount of error the mock CCW will apply
+        # when following the rotator.
+        # Reported CCW position = rotator position + ccw_following_error
+        self.ccw_following_error = 0
+
+        # Like ccw_following_error, but only applied once, then zeroed.
+        self.ccw_transient_following_error = 0
+
     def basic_make_csc(self, initial_state, simulation_mode=1, config_dir=None):
         return mtrotator.RotatorCsc(
             initial_state=initial_state,
             simulation_mode=simulation_mode,
             config_dir=config_dir,
         )
-
-    async def test_bin_script(self):
-        """Test running from the command line script.
-        """
-        await self.check_bin_script(
-            name="MTRotator",
-            index=None,
-            exe_name="run_mtrotator.py",
-            cmdline_args=["--simulate"],
-        )
-
-    async def test_standard_state_transitions(self):
-        enabled_commands = (
-            "configureVelocity",
-            "configureAcceleration",
-            "move",
-            "stop",
-            "trackStart",
-        )
-        async with self.make_csc(initial_state=salobj.State.STANDBY, simulation_mode=1):
-            await self.check_standard_state_transitions(
-                enabled_commands=enabled_commands
-            )
-
-    async def test_configure_acceleration(self):
-        """Test the configureAcceleration command.
-        """
-        async with self.make_csc(initial_state=salobj.State.ENABLED, simulation_mode=1):
-            data = await self.remote.evt_configuration.next(
-                flush=False, timeout=STD_TIMEOUT
-            )
-            initial_limit = data.accelerationLimit
-            print("initial_limit=", initial_limit)
-            new_limit = initial_limit - 0.1
-            await self.remote.cmd_configureAcceleration.set_start(
-                alimit=new_limit, timeout=STD_TIMEOUT
-            )
-            data = await self.remote.evt_configuration.next(
-                flush=False, timeout=STD_TIMEOUT
-            )
-            self.assertAlmostEqual(data.accelerationLimit, new_limit)
-
-            for bad_alimit in (-1, 0, mtrotator.MAX_ACCEL_LIMIT + 0.001):
-                with self.subTest(bad_alimit=bad_alimit):
-                    with salobj.assertRaisesAckError(ack=salobj.SalRetCode.CMD_FAILED):
-                        await self.remote.cmd_configureAcceleration.set_start(
-                            alimit=bad_alimit, timeout=STD_TIMEOUT
-                        )
-
-    async def test_configure_velocity(self):
-        """Test the configureVelocity command.
-        """
-        async with self.make_csc(initial_state=salobj.State.ENABLED, simulation_mode=1):
-            data = await self.remote.evt_configuration.next(
-                flush=False, timeout=STD_TIMEOUT
-            )
-            initial_limit = data.velocityLimit
-            new_limit = initial_limit - 0.1
-            await self.remote.cmd_configureVelocity.set_start(
-                vlimit=new_limit, timeout=STD_TIMEOUT
-            )
-            data = await self.remote.evt_configuration.next(
-                flush=False, timeout=STD_TIMEOUT
-            )
-            self.assertAlmostEqual(data.velocityLimit, new_limit)
-
-            for bad_vlimit in (0, -1, mtrotator.MAX_VEL_LIMIT + 0.001):
-                with self.subTest(bad_vlimit=bad_vlimit):
-                    with salobj.assertRaisesAckError(ack=salobj.SalRetCode.CMD_FAILED):
-                        await self.remote.cmd_configureVelocity.set_start(
-                            vlimit=bad_vlimit, timeout=STD_TIMEOUT
-                        )
 
     async def check_rotation(self):
         """Check the next rotation telemetry messages.
@@ -156,6 +98,267 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
             rotation_data.actualVelocity, path_segment.velocity, delta=slop
         )
 
+    @contextlib.asynccontextmanager
+    async def make_csc(
+        self,
+        initial_state=salobj.State.OFFLINE,
+        config_dir=None,
+        simulation_mode=1,
+        log_level=None,
+        timeout=STD_TIMEOUT,
+        run_mock_ccw=True,  # Set False to test failure to enable
+        **kwargs,
+    ):
+        """Override make_csc
+
+        This exists primarily because we need to start a mock
+        camera cable wrap controller before we can enable the CSC.
+        It also offers the opportunity to make better defaults.
+
+        Parameters
+        ----------
+        name : `str`
+            Name of SAL component.
+        initial_state : `lsst.ts.salobj.State` or `int`, optional
+            The initial state of the CSC. Defaults to STANDBY.
+        config_dir : `str`, optional
+            Directory of configuration files, or `None` (the default)
+            for the standard configuration directory (obtained from
+            `ConfigureCsc._get_default_config_dir`).
+        simulation_mode : `int`, optional
+            Simulation mode. Defaults to 0 because not all CSCs support
+            simulation. However, tests of CSCs that support simulation
+            will almost certainly want to set this nonzero.
+        log_level : `int` or `None`, optional
+            Logging level, such as `logging.INFO`.
+            If `None` then do not set the log level, leaving the default
+            behavior of `SalInfo`: increase the log level to INFO.
+        timeout : `float`, optional
+            Time limit for the CSC to start (seconds).
+        run_mock_ccw : `bool`, optional
+            If True then start a mock camera cable wrap controller.
+        **kwargs : `dict`, optional
+            Extra keyword arguments for `basic_make_csc`.
+            For a configurable CSC this may include ``settings_to_apply``,
+            especially if ``initial_state`` is DISABLED or ENABLED.
+
+        """
+        # We cannot transition the CSC to ENABLED
+        # until the CCW folloing loop is running.
+        # So if initial_state is ENABLED
+        # start the CSC in DISABLED, start the CCW following loop,
+        # then transition to ENABLED and swallow the DISABLED state
+        # and associated controller state (make_csc reads all but the final
+        # CSC summary state and controller state).
+        if initial_state == salobj.State.ENABLED:
+            modified_initial_state = salobj.State.DISABLED
+        else:
+            modified_initial_state = initial_state
+
+        async with super().make_csc(
+            initial_state=modified_initial_state,
+            config_dir=config_dir,
+            simulation_mode=simulation_mode,
+            log_level=log_level,
+            timeout=timeout,
+            **kwargs,
+        ), salobj.Controller(name="MTMount") as self.mtmount_controller:
+            if run_mock_ccw:
+                self.mock_ccw_task = asyncio.create_task(self.mock_ccw_loop())
+            else:
+                print("do not run mock_ccw_loop")
+                self.mock_ccw_task = asyncio.Future()
+            if initial_state != modified_initial_state:
+                await self.remote.cmd_enable.start(timeout=STD_TIMEOUT)
+                await self.assert_next_summary_state(salobj.State.DISABLED)
+                await self.assert_next_sample(
+                    topic=self.remote.evt_controllerState,
+                    controllerState=ControllerState.DISABLED,
+                )
+            try:
+                yield
+            finally:
+                self.mock_ccw_task.cancel()
+
+    async def mock_ccw_loop(self):
+        """Mock the MTMount camera cable wrap system.
+
+        Output cameraCableWrap telemetry that simulates
+        the camera cable wrap following the rotator.
+        """
+        print("mock_ccw_loop starting")
+        try:
+            while True:
+                rotation_data = await self.remote.tel_rotation.next(
+                    flush=True, timeout=STD_TIMEOUT
+                )
+
+                ccw_tai = salobj.current_tai()
+                dt = ccw_tai - rotation_data.timestamp
+                ccw_position = (
+                    self.ccw_following_error
+                    + self.ccw_transient_following_error
+                    + rotation_data.demandPosition
+                    + rotation_data.demandVelocity * dt
+                )
+                print("mock_ccw_loop: put tel_cameraCableWrap")
+                self.mtmount_controller.tel_cameraCableWrap.set_put(
+                    actualPosition=ccw_position,
+                    actualVelocity=rotation_data.actualVelocity,
+                    actualAcceleration=0,
+                    timestamp=ccw_tai,
+                )
+                self.ccw_transient_following_error = 0
+        except asyncio.CancelledError:
+            print("mock_ccw_loop canceled")
+        except Exception as e:
+            print(f"mock_ccw_loop failed: {e}")
+
+    async def test_bin_script(self):
+        """Test running from the command line script.
+        """
+        await self.check_bin_script(
+            name="MTRotator",
+            index=None,
+            exe_name="run_mtrotator.py",
+            cmdline_args=["--simulate"],
+        )
+
+    async def test_enable_no_ccw_telemetry(self):
+        """Test that it is not possible to enable the CSC if it
+        is not receiving MTMount cameraCableWrap telemetry.
+        """
+        async with self.make_csc(
+            initial_state=salobj.State.DISABLED, run_mock_ccw=False
+        ):
+            with salobj.assertRaisesAckError(ack=salobj.SalRetCode.CMD_FAILED):
+                await self.remote.cmd_enable.start(timeout=STD_TIMEOUT)
+            # TODO: update this to FAULT
+            await self.assert_next_summary_state(salobj.State.DISABLED)
+
+    async def test_excessive_ccw_following_error(self):
+        async with self.make_csc(initial_state=salobj.State.ENABLED):
+            await self.assert_next_summary_state(salobj.State.ENABLED)
+
+            # Wait a bit; the CSC should still be enabled.
+            # Wait for a few rotator telemetry messages,
+            # which in turn trigger CCW telemetry.
+            delay = self.csc.mock_ctrl.telemetry_interval * 5
+            await asyncio.sleep(delay)
+            self.assertEqual(self.csc.summary_state, salobj.State.ENABLED)
+
+            # Specify excessive positive following error;
+            # the CSC should shortly be disabled.
+            self.ccw_following_error = self.csc.config.max_ccw_following_error + 0.1
+            # TODO: update this to FAULT
+            await self.assert_next_summary_state(
+                salobj.State.DISABLED, timeout=STD_TIMEOUT
+            )
+
+            # Zero the following error and re-enable the CSC.
+            self.ccw_following_error = 0
+            states = await salobj.set_summary_state(
+                self.remote, state=salobj.State.ENABLED
+            )
+            for state in states[1:]:
+                await self.assert_next_summary_state(state)
+
+            # Wait a bit; the CSC should still be enabled
+            await asyncio.sleep(WAIT_FOR_CCW_DELAY)
+            self.assertEqual(self.csc.summary_state, salobj.State.ENABLED)
+
+            # Specify excessive negative following error;
+            # the CSC should shortly be disabled.
+            self.ccw_following_error = -(self.csc.config.max_ccw_following_error + 0.1)
+            await self.assert_next_summary_state(
+                salobj.State.DISABLED, timeout=STD_TIMEOUT
+            )
+
+    async def test_transient_excessive_ccw_following_error(self):
+        async with self.make_csc(initial_state=salobj.State.ENABLED):
+            await self.assert_next_summary_state(salobj.State.ENABLED)
+            self.assertGreater(self.csc.config.num_ccw_following_errors, 1)
+
+            # Increase the following error for a single CCW telemetry message;
+            # the CSC should not be disabled
+            self.ccw_transient_following_error = (
+                self.csc.config.max_ccw_following_error + 0.1
+            )
+            await asyncio.sleep(WAIT_FOR_CCW_DELAY)
+            self.assertEqual(self.csc.summary_state, salobj.State.ENABLED)
+
+            # Set the # of fails to 1 and try again;
+            # this time a single transient should cause failure.
+            self.csc.config.num_ccw_following_errors = 1
+            self.ccw_transient_following_error = (
+                self.csc.config.max_ccw_following_error + 0.1
+            )
+            await self.assert_next_summary_state(
+                salobj.State.DISABLED, timeout=STD_TIMEOUT
+            )
+
+    async def test_standard_state_transitions(self):
+        enabled_commands = (
+            "configureVelocity",
+            "configureAcceleration",
+            "move",
+            "stop",
+            "trackStart",
+        )
+        async with self.make_csc(initial_state=salobj.State.STANDBY):
+            await self.check_standard_state_transitions(
+                enabled_commands=enabled_commands
+            )
+
+    async def test_configure_acceleration(self):
+        """Test the configureAcceleration command.
+        """
+        async with self.make_csc(initial_state=salobj.State.ENABLED):
+            data = await self.remote.evt_configuration.next(
+                flush=False, timeout=STD_TIMEOUT
+            )
+            initial_limit = data.accelerationLimit
+            print("initial_limit=", initial_limit)
+            new_limit = initial_limit - 0.1
+            await self.remote.cmd_configureAcceleration.set_start(
+                alimit=new_limit, timeout=STD_TIMEOUT
+            )
+            data = await self.remote.evt_configuration.next(
+                flush=False, timeout=STD_TIMEOUT
+            )
+            self.assertAlmostEqual(data.accelerationLimit, new_limit)
+
+            for bad_alimit in (-1, 0, mtrotator.MAX_ACCEL_LIMIT + 0.001):
+                with self.subTest(bad_alimit=bad_alimit):
+                    with salobj.assertRaisesAckError(ack=salobj.SalRetCode.CMD_FAILED):
+                        await self.remote.cmd_configureAcceleration.set_start(
+                            alimit=bad_alimit, timeout=STD_TIMEOUT
+                        )
+
+    async def test_configure_velocity(self):
+        """Test the configureVelocity command.
+        """
+        async with self.make_csc(initial_state=salobj.State.ENABLED):
+            data = await self.remote.evt_configuration.next(
+                flush=False, timeout=STD_TIMEOUT
+            )
+            initial_limit = data.velocityLimit
+            new_limit = initial_limit - 0.1
+            await self.remote.cmd_configureVelocity.set_start(
+                vlimit=new_limit, timeout=STD_TIMEOUT
+            )
+            data = await self.remote.evt_configuration.next(
+                flush=False, timeout=STD_TIMEOUT
+            )
+            self.assertAlmostEqual(data.velocityLimit, new_limit)
+
+            for bad_vlimit in (0, -1, mtrotator.MAX_VEL_LIMIT + 0.001):
+                with self.subTest(bad_vlimit=bad_vlimit):
+                    with salobj.assertRaisesAckError(ack=salobj.SalRetCode.CMD_FAILED):
+                        await self.remote.cmd_configureVelocity.set_start(
+                            vlimit=bad_vlimit, timeout=STD_TIMEOUT
+                        )
+
     async def test_move(self):
         """Test the move command for point to point motion.
         """
@@ -163,7 +366,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         # Estimated time to move; a crude estimate used for timeouts
         est_move_duration = 1
 
-        async with self.make_csc(initial_state=salobj.State.ENABLED, simulation_mode=1):
+        async with self.make_csc(initial_state=salobj.State.ENABLED):
             await self.assert_next_sample(
                 topic=self.remote.evt_controllerState,
                 controllerState=ControllerState.ENABLED,
@@ -206,7 +409,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         """
         destination = 20  # a large move so we have plenty of time to stop
         # Estimated time to move; a crude estimate used for timeouts
-        async with self.make_csc(initial_state=salobj.State.ENABLED, simulation_mode=1):
+        async with self.make_csc(initial_state=salobj.State.ENABLED):
             await self.assert_next_sample(
                 topic=self.remote.evt_controllerState,
                 controllerState=ControllerState.ENABLED,
@@ -253,7 +456,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         vel = 0.01
         # Estimated time to slew; a crude estimate used for timeouts
         est_slew_duration = 1
-        async with self.make_csc(initial_state=salobj.State.ENABLED, simulation_mode=1):
+        async with self.make_csc(initial_state=salobj.State.ENABLED):
             await self.assert_next_sample(
                 topic=self.remote.evt_controllerState,
                 controllerState=ControllerState.ENABLED,
@@ -330,7 +533,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
 
         This should go into FAULT.
         """
-        async with self.make_csc(initial_state=salobj.State.ENABLED, simulation_mode=1):
+        async with self.make_csc(initial_state=salobj.State.ENABLED):
             await self.assert_next_summary_state(salobj.State.ENABLED)
             await self.assert_next_sample(
                 topic=self.remote.evt_controllerState,
@@ -383,7 +586,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
 
         This should go into FAULT.
         """
-        async with self.make_csc(initial_state=salobj.State.ENABLED, simulation_mode=1):
+        async with self.make_csc(initial_state=salobj.State.ENABLED):
             await self.assert_next_summary_state(salobj.State.ENABLED)
             await self.assert_next_sample(
                 topic=self.remote.evt_controllerState,
@@ -433,7 +636,7 @@ class TestRotatorCsc(hexrotcomm.BaseCscTestCase, asynctest.TestCase):
         After the first track command send no more.
         This should send the CSC into FAULT.
         """
-        async with self.make_csc(initial_state=salobj.State.ENABLED, simulation_mode=1):
+        async with self.make_csc(initial_state=salobj.State.ENABLED):
             await self.assert_next_summary_state(salobj.State.ENABLED)
             await self.assert_next_sample(
                 topic=self.remote.evt_controllerState,
