@@ -3,4 +3,21 @@ $id: https://github.com/lsst-ts/ts_mtrotator/tree/schema/MTRotator.yaml
 title: MTRotator v1
 description: Configuration for MTRotator, which has no configuration.
 type: object
+properties:
+  max_ccw_following_error:
+    description: >-
+      The maximum difference (in degrees) between the camera rotator actual position and the
+      camera cable wrap actual position, beyond which the rotator is halted and sent to FAULT state.
+    type: number
+    exclusiveMinimum: 0
+    default: 2.2
+  num_ccw_following_errors:
+    description: >-
+      The number of sequential camera cable wrap following errors required before halting the rotator.
+      A value of 1 will fail at the first error. A value of 3 avoids triggering on an outlier.
+      Note that the value is tested each time rotator telemetry arrives.
+    type: integer
+    exclusiveMinimum: 0
+    default: 3
+required: [max_ccw_following_error, num_ccw_following_errors]
 additionalProperties: false
